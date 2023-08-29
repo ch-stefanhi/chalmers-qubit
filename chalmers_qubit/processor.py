@@ -4,7 +4,7 @@ from qutip_qip.device import ModelProcessor, Model
 from qutip_qip.transpiler import to_chain_structure
 from .chalmerscompiler import ChalmersCompiler
 
-__all__ = ['ChalmersQubits']
+__all__ = ["ChalmersQubits"]
 
 
 class ChalmersQubits(ModelProcessor):
@@ -61,7 +61,7 @@ class ChalmersQubits(ModelProcessor):
             self.load_circuit(qc)
         # construct qobjevo for unitary evolution
         noisy_qobjevo, c_ops = self.get_qobjevo(noisy=noisy)
-        
+
         # time steps
         tlist = noisy_qobjevo.tlist
         H = noisy_qobjevo.to_list()
@@ -105,19 +105,18 @@ class ChalmersQubitsModel(Model):
         self.t1 = t1  # t1 times
         self.t2 = t2  # t2 times
         # Qubit frequency in (GHz)
-        self.resonance_freq = [2 * np.pi * 5.0] + \
-            [2 * np.pi * 5.4] * (num_qubits - 1)
+        self.resonance_freq = [2 * np.pi * 5.0] + [2 * np.pi * 5.4] * (num_qubits - 1)
         # Choose rotating frame frequency as the qubit freq
         self.rotating_freq = self.resonance_freq
         # Anharmonicity in (GHz)
-        self.anharmonicity = [- 2 * np.pi * 0.3] * num_qubits
+        self.anharmonicity = [-2 * np.pi * 0.3] * num_qubits
 
         self.params = {
             "wq": self.resonance_freq,
             "alpha": self.anharmonicity,
             "wr": self.rotating_freq,
             "t1": self.t1,
-            "t2": self.t2
+            "t2": self.t2,
         }
         self._drift = []
         self._set_up_drift()
@@ -130,8 +129,11 @@ class ChalmersQubitsModel(Model):
             omega = self.resonance_freq[m]
             omega_rot = self.rotating_freq[m]
             self._drift.append(
-                ((omega - omega_rot) * destroy_op.dag() * destroy_op
-                 + alpha * destroy_op.dag()**2 * destroy_op**2, [m])
+                (
+                    (omega - omega_rot) * destroy_op.dag() * destroy_op
+                    + alpha * destroy_op.dag() ** 2 * destroy_op**2,
+                    [m],
+                )
             )
 
     def _set_up_controls(self):
@@ -146,8 +148,7 @@ class ChalmersQubitsModel(Model):
         for m in range(num_qubits):
             destroy_op = destroy(dims[m])
             controls["sx" + str(m)] = (destroy_op.dag() + destroy_op, [m])
-            controls["sy" + str(m)] = (1j
-                                       * (destroy_op.dag() - destroy_op), [m])
+            controls["sy" + str(m)] = (1j * (destroy_op.dag() - destroy_op), [m])
 
         for m in range(self.num_qubits - 1):
             for n in range(m + 1, self.num_qubits):
@@ -171,19 +172,25 @@ class ChalmersQubitsModel(Model):
         """
         num_qubits = self.num_qubits
         labels = [
-            {f"sx{n}": r"$a_{" + f"{n}" + r"}^\dagger + a_{"
-                + f"{n}" + r"}$" for n in range(num_qubits)},
-            {f"sy{n}": r"$i(a_{" + f"{n}" + r"}^\dagger - a_{"
-             + f"{n}" + r"}$)" for n in range(num_qubits)},
+            {
+                f"sx{n}": r"$a_{" + f"{n}" + r"}^\dagger + a_{" + f"{n}" + r"}$"
+                for n in range(num_qubits)
+            },
+            {
+                f"sy{n}": r"$i(a_{" + f"{n}" + r"}^\dagger - a_{" + f"{n}" + r"}$)"
+                for n in range(num_qubits)
+            },
         ]
         label_zz = {}
 
         for m in range(num_qubits - 1):
             for n in range(m + 1, num_qubits):
-                label_zz[f"ab{m}{n}"] = r"$a^\dagger_{" + \
-                    f"{m}" + r"}a_{" + f"{n}" + r"}$"
-                label_zz[f"ba{m}{n}"] = r"$a^\dagger_{" + \
-                    f"{n}" + r"}a_{" + f"{m}" + r"}$"
+                label_zz[f"ab{m}{n}"] = (
+                    r"$a^\dagger_{" + f"{m}" + r"}a_{" + f"{n}" + r"}$"
+                )
+                label_zz[f"ba{m}{n}"] = (
+                    r"$a^\dagger_{" + f"{n}" + r"}a_{" + f"{m}" + r"}$"
+                )
 
         labels.append(label_zz)
         return labels

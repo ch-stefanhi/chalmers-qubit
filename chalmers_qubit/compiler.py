@@ -53,40 +53,40 @@ class ChalmersCompiler(GateCompiler):
                 "Y": self.y_compiler,
                 "XY": self.xy_compiler,
                 "GLOBALPHASE": self.globalphase_compiler,
-            })
+            }
+        )
         self.phase = [0] * num_qubits
 
     def coupling(self, t, y: bool, args: dict) -> np.ndarray:
-        omega_drive = args['drivefreq']
-        delta = args['detuning']
-        phi = args['phase']
+        omega_drive = args["drivefreq"]
+        delta = args["detuning"]
+        phi = args["phase"]
         if y:
-            coeff = self.g * np.sin(omega_drive * t + phi) * \
-                np.exp(1j * delta * t)
+            coeff = self.g * np.sin(omega_drive * t + phi) * np.exp(1j * delta * t)
         else:
-            coeff = self.g * np.sin(omega_drive * t + phi) * \
-                np.exp(- 1j * delta * t)
+            coeff = self.g * np.sin(omega_drive * t + phi) * np.exp(-1j * delta * t)
         return coeff
 
     def drive_coeff(self, t: np.ndarray, y: bool, args: dict) -> np.ndarray:
         # Amplitude, needs to be optimized to get perfect pi-pulse or pi/2-pulse
-        amp = args['amp']
+        amp = args["amp"]
         # DRAG-parameter, needs to be optimized to get no phase errors in as pi/2-pulse
-        qscale = args['qscale']
-        drive_freq = args['freq']
-        phi = args['phase']
-        L = args['gatetime']
-        sigma = args['sigma']
-        Omega_x = amp * np.exp(-pow(t - 0.5 * L, 2)
-                               / (2 * pow(sigma, 2)))
+        qscale = args["qscale"]
+        drive_freq = args["freq"]
+        phi = args["phase"]
+        L = args["gatetime"]
+        sigma = args["sigma"]
+        Omega_x = amp * np.exp(-pow(t - 0.5 * L, 2) / (2 * pow(sigma, 2)))
         Omega_y = qscale * (t - 0.5 * L) / pow(sigma, 2) * Omega_x
 
         if y:
-            coeff = (Omega_x * np.cos(drive_freq * t - phi)
-                     + Omega_y * np.sin(drive_freq * t - phi))
+            coeff = Omega_x * np.cos(drive_freq * t - phi) + Omega_y * np.sin(
+                drive_freq * t - phi
+            )
         else:
-            coeff = (Omega_x * np.sin(drive_freq * t + phi)
-                     - Omega_y * np.cos(drive_freq * t + phi))
+            coeff = Omega_x * np.sin(drive_freq * t + phi) - Omega_y * np.cos(
+                drive_freq * t + phi
+            )
         return coeff
 
     def rz_compiler(self, gate, args):
@@ -145,16 +145,18 @@ class ChalmersCompiler(GateCompiler):
 
         # parameters
         phase = self.phase[q]
-        alpha = self.params['alpha'][q]
-        omega_qubit = self.params['wq'][q]
-        rotating_freq = self.params['wr'][q]
+        alpha = self.params["alpha"][q]
+        omega_qubit = self.params["wq"][q]
+        rotating_freq = self.params["wr"][q]
         omega_drive = rotating_freq - omega_qubit
-        args = {'amp': amp,
-                'qscale': -.5 / alpha,
-                'phase': phase,
-                'freq': omega_drive,
-                'gatetime': t_total,
-                'sigma': sigma}
+        args = {
+            "amp": amp,
+            "qscale": -0.5 / alpha,
+            "phase": phase,
+            "freq": omega_drive,
+            "gatetime": t_total,
+            "sigma": sigma,
+        }
 
         # set start and end to zero
         coeff_x = self.drive_coeff(tlist, False, args)
@@ -163,7 +165,7 @@ class ChalmersCompiler(GateCompiler):
         pulse_info = [
             # (control label, coeff)
             ("sx" + str(q), coeff_x),
-            ("sy" + str(q), coeff_y)
+            ("sy" + str(q), coeff_y),
         ]
 
         return [Instruction(gate, tlist, pulse_info, t_total)]
@@ -202,16 +204,18 @@ class ChalmersCompiler(GateCompiler):
 
         # parameters
         phase = self.phase[q]
-        alpha = self.params['alpha'][q]
-        omega_qubit = self.params['wq'][q]
-        rotating_freq = self.params['wr'][q]
+        alpha = self.params["alpha"][q]
+        omega_qubit = self.params["wq"][q]
+        rotating_freq = self.params["wr"][q]
         omega_drive = rotating_freq - omega_qubit
-        args = {'amp': amp,
-                'qscale': -.5 / alpha,
-                'phase': phase,
-                'freq': omega_drive,
-                'gatetime': t_total,
-                'sigma': sigma}
+        args = {
+            "amp": amp,
+            "qscale": -0.5 / alpha,
+            "phase": phase,
+            "freq": omega_drive,
+            "gatetime": t_total,
+            "sigma": sigma,
+        }
 
         # set start and end to zero
         coeff_x = self.drive_coeff(tlist, True, args)
@@ -220,7 +224,7 @@ class ChalmersCompiler(GateCompiler):
         pulse_info = [
             # (control label, coeff)
             ("sx" + str(q), coeff_x),
-            ("sy" + str(q), coeff_y)
+            ("sy" + str(q), coeff_y),
         ]
 
         return [Instruction(gate, tlist, pulse_info, t_total)]
@@ -255,12 +259,16 @@ class ChalmersCompiler(GateCompiler):
         omega2_rot = self.params["wr"][q2]
         alpha1 = self.params["alpha"][q1]
 
-        args = {'drivefreq': abs(omega1 + alpha1 - omega2),
-                'detuning': (omega1_rot - omega2_rot),
-                'phase': 0}
+        args = {
+            "drivefreq": abs(omega1 + alpha1 - omega2),
+            "detuning": (omega1_rot - omega2_rot),
+            "phase": 0,
+        }
 
-        pulse_info = [("ab" + str(q1) + str(q2), self.coupling(tlist, True, args)),
-                      ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args))]
+        pulse_info = [
+            ("ab" + str(q1) + str(q2), self.coupling(tlist, True, args)),
+            ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args)),
+        ]
 
         return [Instruction(gate, tlist, pulse_info, t_total)]
 
@@ -294,12 +302,16 @@ class ChalmersCompiler(GateCompiler):
         omega2 = self.params["wq"][q2]
         omega2_rot = self.params["wr"][q2]
 
-        args = {'drivefreq': abs(omega1 - omega2),
-                'detuning': (omega1_rot - omega2_rot),
-                'phase': 0, }
+        args = {
+            "drivefreq": abs(omega1 - omega2),
+            "detuning": (omega1_rot - omega2_rot),
+            "phase": 0,
+        }
 
-        pulse_info = [("ab" + str(q1) + str(q2), self.coupling(tlist, True, args)),
-                      ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args))]
+        pulse_info = [
+            ("ab" + str(q1) + str(q2), self.coupling(tlist, True, args)),
+            ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args)),
+        ]
 
         return [Instruction(gate, tlist, pulse_info, t_total)]
 
@@ -342,18 +354,22 @@ class ChalmersCompiler(GateCompiler):
         omega2_drive = abs(omega1 + alpha1 - omega3)
 
         # We do simultaneous drive
-        args1 = {"drivefreq": omega1_drive,
-                 "detuning": (omega1_rot - omega2_rot),
-                 "phase": 0}
-        args2 = {"drivefreq": omega2_drive,
-                 "detuning": (omega1_rot - omega3_rot),
-                 "phase": phi - np.pi}
+        args1 = {
+            "drivefreq": omega1_drive,
+            "detuning": (omega1_rot - omega2_rot),
+            "phase": 0,
+        }
+        args2 = {
+            "drivefreq": omega2_drive,
+            "detuning": (omega1_rot - omega3_rot),
+            "phase": phi - np.pi,
+        }
 
         pulse_info = [
             ("ab" + str(q1) + str(q2), self.coupling(tlist, True, args1)),
             ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args1)),
             ("ab" + str(q1) + str(q3), self.coupling(tlist, True, args2)),
-            ("ba" + str(q1) + str(q3), self.coupling(tlist, False, args2))
+            ("ba" + str(q1) + str(q3), self.coupling(tlist, False, args2)),
         ]
 
         return [Instruction(gate, tlist, pulse_info)]
