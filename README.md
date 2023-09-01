@@ -9,13 +9,13 @@ The package requires [qutip-qip](https://qutip-qip.readthedocs.io/en/stable/) wh
 Quantum Toolbox in Python. The requirements are already specified in the `setup.py` file and you can install `chalmers-qubit` simply by downloading this package or cloning
 it and running the following command:
 ```
-python setup.py install
+pip install .
 ```
 
-It might be beneficial to install an editable version which can be further customized using the following command:
+It might be beneficial to install an editable version. In the editable version, changes to the code are reflected systemwide without requiring a reinstallation.
 
 ```
-python setup.py develop
+pip install -e .
 ```
 
 # Usage
@@ -25,6 +25,8 @@ where first, a quantum circuit is defined using [`qutip-qip`](https://qutip-qip.
 and then run on the custom `ChalmersProcessor`. The custom processor is defined
 in `chalmers_qubit.processor` and can be initialized with noise parameters,
 e.g., T1 and T2 values for each qubit.
+
+A number of notebooks exploring the usage of the device is available in `doc/notebooks`. 
 
 Note that only gates with compilation instructions in `chalmers_qubit/compiler.py` will work.
 

@@ -2,7 +2,7 @@ import numpy as np
 from qutip import basis, destroy, qeye, tensor, propagator
 from qutip_qip.device import ModelProcessor, Model
 from qutip_qip.transpiler import to_chain_structure
-from .chalmerscompiler import ChalmersCompiler
+from .compiler import ChalmersCompiler
 
 __all__ = ["ChalmersQubits"]
 
