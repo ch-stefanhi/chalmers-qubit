@@ -1,0 +1,1 @@
+from qutip_qip.device import SCQubitsModel as SarimnerModel

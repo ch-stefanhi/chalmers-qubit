@@ -50,21 +50,20 @@ Notebooks exploring the usage of the simulator is available in `doc/notebooks`.
 
 ```
 import numpy as np
-from qutip import basis
+from qutip import basis, tensor
 from qutip_qip.circuit import QubitCircuit
-from chalmers_qubit.sarimner.processor import ChalmersProcessor
+from chalmers_qubit.sarimner.processor import SarimnerProcessor
 
 # Define a circuit
-qc = QubitCircuit(3)
-qc.add_gate("X", targets=2)
+qc = QubitCircuit(2)
+qc.add_gate("X", targets=1)
 qc.add_gate("SNOT", targets=0)
 
 # Run gate-level simulation
-init_state = basis([2,2,2], [0,0,0])
-ideal_result = qc.run(init_state)
+init_state = tensor(basis(3, 0), basis(3, 0))
 
 # Run pulse-level simulation
-processor = ChalmersProcessor(t2=30)
+processor = SarimnerProcessor(num_qubits=2)
 processor.load_circuit(qc)
 tlist = np.linspace(0, 20, 300)
 result = processor.run_state(init_state, tlist=tlist)
