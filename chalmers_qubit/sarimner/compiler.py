@@ -38,30 +38,17 @@ class SarimnerCompiler(GateCompiler):
         self.params = params
         self.g = 2 * np.pi * 1 * 1e-3
         self.gate_compiler.update(
-            {
+            {   
+                "X": self.x_compiler,
+                "Y": self.y_compiler,
+                "Z": self.z_compiler,
                 "RZ": self.rz_compiler,
                 "RX": self.rx_compiler,
                 "RY": self.ry_compiler,
                 "CZ": self.cz_compiler,
-                "CCZS": self.cczs_compiler,
-                "Z": self.z_compiler,
-                "X": self.x_compiler,
-                "Y": self.y_compiler,
-                "XY": self.xy_compiler,
-                "GLOBALPHASE": self.globalphase_compiler,
             }
         )
         self.phase = [0] * num_qubits
-
-    def coupling(self, t, y: bool, args: dict) -> np.ndarray:
-        omega_drive = args["drivefreq"]
-        delta = args["detuning"]
-        phi = args["phase"]
-        if y:
-            coeff = self.g * np.sin(omega_drive * t + phi) * np.exp(1j * delta * t)
-        else:
-            coeff = self.g * np.sin(omega_drive * t + phi) * np.exp(-1j * delta * t)
-        return coeff
 
     def drive_coeff(self, t: np.ndarray, y: bool, args: dict) -> np.ndarray:
         # Amplitude, needs to be optimized to get perfect pi-pulse or pi/2-pulse
@@ -268,49 +255,6 @@ class SarimnerCompiler(GateCompiler):
 
         return [Instruction(gate, tlist, pulse_info, t_total)]
 
-    def xy_compiler(self, gate, args):
-        """
-        Compiler for XY gate.
-
-        Parameters
-        ----------
-        gate : :obj:`.Gate`:
-            The quantum gate to be compiled.
-        args : dict
-            The compilation configuration defined in the attributes
-            :obj:`.GateCompiler.args` or given as a parameter in
-            :obj:`.GateCompiler.compile`.
-
-        Returns
-        -------
-        A list of :obj:`.Instruction`, including the compiled pulse
-        information for this gate.
-        """
-        q1 = gate.controls[0]
-        q2 = gate.targets[0]
-
-        # gate time
-        t_total = np.pi / (2 * self.g)
-        tlist = np.linspace(0, t_total, 5000)
-
-        omega1 = self.params["wq"][q1]
-        omega1_rot = self.params["wr"][q1]
-        omega2 = self.params["wq"][q2]
-        omega2_rot = self.params["wr"][q2]
-
-        args = {
-            "drivefreq": abs(omega1 - omega2),
-            "detuning": (omega1_rot - omega2_rot),
-            "phase": 0,
-        }
-
-        pulse_info = [
-            ("ab" + str(q1) + str(q2), self.coupling(tlist, True, args)),
-            ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args)),
-        ]
-
-        return [Instruction(gate, tlist, pulse_info, t_total)]
-
     def cczs_compiler(self, gate, args):
         """
         Compiler for CCZS gate.
@@ -369,35 +313,3 @@ class SarimnerCompiler(GateCompiler):
         ]
 
         return [Instruction(gate, tlist, pulse_info)]
-
-    def z_compiler(self, gate, args):
-        """
-        Compiler for Z-measurement
-        """
-        pass
-
-    def x_compiler(self, gate, args):
-        """
-        Compiler for X-measurement
-        """
-        # HADAMARD GATE
-        q = gate.targets[0]
-        self.rz_compiler(Gate("RZ", targets=q, arg_value=np.pi / 2), args)
-        self.rx_compiler(Gate("RX", targets=q, arg_value=np.pi / 2), args)
-        self.rz_compiler(Gate("RZ", targets=q, arg_value=np.pi / 2), args)
-
-    def y_compiler(self, gate, args):
-        """
-        Compiler for Y-measurement
-        """
-        # HADAMARD GATE FOLLOWED BY S GATE
-        q = gate.targets[0]
-        self.rz_compiler(Gate("RZ", targets=q, arg_value=np.pi / 2), args)
-        self.rx_compiler(Gate("RX", targets=q, arg_value=np.pi / 2), args)
-        self.rz_compiler(Gate("RZ", targets=q, arg_value=np.pi), args)
-
-    def globalphase_compiler(self, gate, args):
-        """
-        Compiler for the GLOBALPHASE gate
-        """
-        self.global_phase += gate.arg_value
