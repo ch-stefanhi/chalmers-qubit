@@ -1,6 +1,6 @@
 import numpy as np
 from qutip_qip.compiler import GateCompiler, Instruction
-from qutip_qip.circuit import Gate
+from qutip_qip.operations import Gate
 
 
 __all__ = ["ChalmersCompiler"]

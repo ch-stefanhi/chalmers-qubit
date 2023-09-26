@@ -4,14 +4,14 @@ import numpy as np
 from qutip import basis, tensor
 from qutip_qip.circuit import QubitCircuit
 from chalmers_qubit.sarimner.processor import SarimnerProcessor
+from chalmers_qubit.ratatosk.processor import ChalmersQubits
 
 
 def test_basic_circuit():
     """Tests if a simple circuit runs with the processor"""
     # Define a circuit
     qc = QubitCircuit(2)
-    qc.add_gate("X", targets=1)
-    qc.add_gate("SNOT", targets=0)
+    qc.add_gate("X", targets=[0])
 
     # Run gate-level simulation
     init_state = tensor(basis(3, 0), basis(3, 0))
