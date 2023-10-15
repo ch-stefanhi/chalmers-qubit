@@ -6,7 +6,7 @@ from qutip_qip.device import Model
 from qutip_qip.noise import RelaxationNoise
 
 
-class SarimnerModel:
+class SarimnerModel(Model):
     """Model definitions for the physical system defining the processor.
 
     The model requires the number of qubits and stores the drift
@@ -14,26 +14,32 @@ class SarimnerModel:
     various parameters that the processor will use for the simulations, e.g.,
     t1, t2 values etc.
     """
-    def __init__(self,
-                 num_qubits: int,
-                 dims: int,
-                 wq: list,
-                 alpha: list,
-                 wr: list,
-                 t1: list,
-                 t2: list,
-                 zz_crosstalk_static: dict,
-                 ):
+
+    def __init__(
+        self,
+        num_qubits: int,
+        wq: list,
+        alpha: list,
+        wr: list,
+        t1: list,
+        t2: list,
+        zz_crosstalk_static: dict = None,
+        dims: int = None,
+    ):
+        if dims is None:
+            dims = num_qubits * [3]
+
         self.num_qubits = num_qubits
-        self.dims = dims
         self.wq = wq
         self.alpha = alpha
         self.wr = wr
         self.t1 = t1
         self.t2 = t2
         self.zz_crosstalk_static = zz_crosstalk_static
+        self.dims = dims
         self._drift = self.get_drift_hamiltonian_terms()
         self._controls = self.get_control_hamiltonian_terms()
+        self.params = {"t1": t1, "t2": t2}
 
     def get_drift_hamiltonian_terms(self):
         drift = []

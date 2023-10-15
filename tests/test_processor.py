@@ -3,22 +3,36 @@
 import numpy as np
 from qutip import basis, tensor
 from qutip_qip.circuit import QubitCircuit
+
+from chalmers_qubit.sarimner.model import SarimnerModel
 from chalmers_qubit.sarimner.processor import SarimnerProcessor
-from chalmers_qubit.ratatosk.processor import ChalmersQubits
+from chalmers_qubit.sarimner.compiler import SarimnerCompiler
 
 
-def test_basic_circuit():
-    """Tests if a simple circuit runs with the processor"""
-    # Define a circuit
-    qc = QubitCircuit(2)
-    qc.add_gate("X", targets=[0])
+def test_default_processor_initialization():
+    """Tests if a processor is correctly initialized with default values"""
 
-    # Run gate-level simulation
-    init_state = tensor(basis(3, 0), basis(3, 0))
+    # Define Model
+    model = SarimnerModel(
+        2,
+        wq=[
+            1.0,
+            2.0,
+        ],
+        wr=[2.0, 3.0],
+        alpha=[100, 200],
+        t1=[1, 2],
+        t2=[20, 30],
+        zz_crosstalk_static=None,
+    )
 
-    # Run pulse-level simulation
-    processor = SarimnerProcessor(num_qubits=2)
-    processor.load_circuit(qc)
-    tlist = np.linspace(0, 20, 300)
-    result = processor.run_state(init_state, tlist=tlist)
-    assert result.states[-1].dims == [[3, 3], [1, 1]]
+    compiler = SarimnerCompiler(model, g=2.0)
+
+    # Initialize and check processor attributes
+    processor = SarimnerProcessor(model=model, compiler=compiler)
+
+    assert processor.num_qubits == 2
+    assert processor.dims == 2 * [3]  # Default
+    assert processor.model.__class__.__name__ == "SarimnerModel"
+    assert processor.compiler.__class__.__name__ == "SarimnerCompiler"
+    assert processor.compiler.g == 2

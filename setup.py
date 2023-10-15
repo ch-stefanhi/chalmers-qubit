@@ -7,7 +7,7 @@ setuptools.setup(
     description="A model of the Chalmers device to be used with qutip-qip",
     packages=setuptools.find_packages(),
     install_requires=[
-        'qutip-qip',
+        "qutip-qip",
     ],
     python_requires=">=3.9",
 )
