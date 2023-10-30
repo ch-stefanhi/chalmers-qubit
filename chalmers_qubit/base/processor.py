@@ -37,8 +37,8 @@ class Processor(ABC):
 
         # The pulses will be created after a quantum circuit has been loaded
         # with self.load_circuit(qc)
-        self._pulses = []
-        self._qc = None
+        self.pulses = {}
+        self.qc = None
 
     @abstractmethod
     def load_circuit(self, qc: QubitCircuit):
@@ -50,28 +50,11 @@ class Processor(ABC):
         Returns:
             _type_: _description_
         """
+        self.qc = qc
         # Load the circuit and generate the pulses
         # Any transpilation goes here
         # self.pulses = self.generate_pulses(qc)
-
-    @property
-    def pulses(self):
-        """The pulses generated to run a corresponding quantum circuit"""
-        return self._pulses
-
-    @property
-    def num_qubits(self):
-        """The number of qubits"""
-        return self.model.num_qubits
-
-    @property
-    def dims(self):
-        """The dimensions of the Hilbert space"""
-        return self.model.dims
-
-    @pulses.setter
-    def pulses(self, pulses):
-        self._pulses = pulses
+        pass
 
     def run_state(self, init_state=None, solver="mesolve", **kwargs):
         # Generate time-dependent Hamiltonian using the pulses
