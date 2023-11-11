@@ -25,11 +25,10 @@ class Compiler(ABC):
         self.model = model
         self.global_phase = 0.0
 
-        # Compilers are functions mapped by the name of the Gate to the 
+        # Compilers are functions mapped by the name of the Gate to the
         # instructions on how to translate them to an Instruction
         self.gate_compilers = {"GLOBALPHASE": self.global_phase}
 
     def global_phase(self):
-        """Compiles global phase operations
-        """
+        """Compiles global phase operations"""
         pass
