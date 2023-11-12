@@ -30,11 +30,12 @@ class Model(ABC):
     controls : dict of {str: (Qobj, int)}
         A dictionary to store control Hamiltonian where the key defines a
         string representation of the Hamiltonian and the values are
-        tuples of (Qobj, list), e.g., {"sx0": (sigmax(), 0)}.
+        tuples of (Qobj, list) representing the operator and the qubit
+        e.g., {"sx": (sigmax(), 0)}.
     drift : dict of {str: (Qobj, int)}
         A dictionary to store drift Hamiltonian terms where the key defines a
         string representation of the Hamiltonian and the values are
-        tuples of (Qobj, list), e.g., {"a0": (destroy(), 0)}.
+        tuples of (Qobj, list), e.g., {"a": (destroy(self.dims[0]), 0)}.
     params : dict
         Hardware-specific parameters.
 

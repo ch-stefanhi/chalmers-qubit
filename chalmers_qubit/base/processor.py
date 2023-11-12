@@ -50,11 +50,35 @@ class Processor(ABC):
         Returns:
             _type_: _description_
         """
-        self.qc = qc
-        # Load the circuit and generate the pulses
-        # Any transpilation goes here
-        # self.pulses = self.generate_pulses(qc)
-        pass
+        qc = self.transpile(qc)
+
+        # Choose a compiler and compile the circuit
+        if self.compiler is not None:
+            tlist, coeffs = self.compiler.compile(qc.gates)
+        else:
+            raise ValueError("No compiler defined.")
+        
+        # Save compiler pulses
+        return tlist, coeffs
+    
+    @abstractmethod
+    def transpile(self, qc: QubitCircuit)-> (list, list):
+        """
+        Converts the circuit to one that can be executed on given hardware if
+        the gates in the circuit are not in the supported gates.
+
+        Parameters
+        ----------
+        qc: :class:`.QubitCircuit`
+            The input quantum circuit.
+
+        Returns
+        -------
+        qc: :class:`QubitCircuit`
+            The transpiled quantum circuit.
+        """
+        # ...
+        return qc
 
     def run_state(self, init_state=None, solver="mesolve", **kwargs):
         # Generate time-dependent Hamiltonian using the pulses

@@ -60,7 +60,9 @@ class SarimnerModel(Model):
         if resonance_frequencies is None:
             resonance_frequencies = qubit_frequencies
         self.resonance_frequencies = resonance_frequencies
-        self.zz_crosstalk = zz_crosstalk_static if zz_crosstalk_static is not None else {}
+        self.zz_crosstalk = (
+            zz_crosstalk_static if zz_crosstalk_static is not None else {}
+        )
 
         self._drift = self.setup_drift()
         self._controls = self.setup_controls()
@@ -84,27 +86,35 @@ class SarimnerModel(Model):
             omega_rot = self.resonance_frequencies[m]
 
             # Frequency difference term
-            drift_key_freq_diff = r"\Delta \omega" +str(m)
-            drift[drift_key_freq_diff] = (
-                (omega - omega_rot) * destroy_op.dag() * destroy_op,
-                [m],
-            )
+            drift[(r"\Delta \omega a.dag a", str(m))] = ((omega - omega_rot)*destroy_op.dag() * destroy_op, [m])
 
             # Anharmonicity term
-            drift_key_anharmonicity = r"\alpha" + str(m)
-            drift[drift_key_anharmonicity] = (
+            drift[(r"$\alpha a.dag^2 a^2$", str(m))] = (
                 alpha * destroy_op.dag() ** 2 * destroy_op ** 2,
                 [m],
             )
-        
+
         # Adding static ZZ coupling terms
-        for (qubit1, qubit2), coupling_strength in self.zz_crosstalk.items():
-            sigma_z1 = tensor([qeye(self.dims[qubit1]) if i != qubit1 else destroy(self.dims[qubit1]).dag() * destroy(self.dims[qubit1]) for i in range(self.num_qubits)])
-            sigma_z2 = tensor([qeye(self.dims[qubit2]) if i != qubit2 else destroy(self.dims[qubit2]).dag() * destroy(self.dims[qubit2]) for i in range(self.num_qubits)])
-            
+        for (m, n), coupling_strength in self.zz_crosstalk.items():
+            sigma_z1 = tensor(
+                [
+                    qeye(self.dims[m])
+                    if i != m
+                    else destroy(self.dims[m]).dag() * destroy(self.dims[m])
+                    for i in range(self.num_qubits)
+                ]
+            )
+            sigma_z2 = tensor(
+                [
+                    qeye(self.dims[n])
+                    if i != n
+                    else destroy(self.dims[n]).dag() * destroy(self.dims[n])
+                    for i in range(self.num_qubits)
+                ]
+            )
+
             zz_term = coupling_strength * sigma_z1 * sigma_z2
-            drift_key_zz = f"ZZ{qubit1}{qubit2}"
-            drift[drift_key_zz] = (zz_term, [qubit1, qubit2])
+            drift[("ZZ", "".join([m, n]))] = (zz_term, [m, n])
 
         return drift
 
@@ -112,7 +122,8 @@ class SarimnerModel(Model):
         """
         Sets up the control Hamiltonian terms based on the system's qubit dimensions. These terms
         are used to manipulate the qubit states. The control terms are stored in a dictionary with
-        keys representing the control action and the qubit number.
+        keys given by a tuple of () representing the control action and
+        the qubit number.
 
         Returns
         -------
@@ -122,8 +133,8 @@ class SarimnerModel(Model):
         controls = {}
         for m in range(self.num_qubits):
             destroy_op = destroy(self.dims[m])
-            controls[f"sx{m}"] = (destroy_op.dag() + destroy_op, [m])
-            controls[f"sy{m}"] = (1j * (destroy_op.dag() - destroy_op), [m])
+            controls[("X", str(m))] = (destroy_op.dag() + destroy_op, [m])
+            controls["Y", str(m)] = (1j * (destroy_op.dag() - destroy_op), [m])
 
         # Inter-qubit coupling terms
         for m in range(self.num_qubits - 1):
@@ -134,7 +145,7 @@ class SarimnerModel(Model):
                 destroy_op2 = destroy(d2)
                 op1 = tensor(destroy_op1.dag(), destroy_op2)
                 op2 = tensor(destroy_op1, destroy_op2.dag())
-                controls[f"ab{m}{n}"] = (op1, [m, n])
-                controls[f"ba{m}{n}"] = (op2, [m, n])
+                controls[("ab", "".join([m, n]))] = (op1, [m, n])
+                controls[("ba", "".join([m, n]))] = (op2, [m, n])
 
         return controls
