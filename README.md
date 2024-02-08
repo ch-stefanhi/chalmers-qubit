@@ -39,11 +39,12 @@ pip install git+https://github.com/aqp-mc2-chalmers/chalmers-qubit.git
 
 The usage of the package follows [qutip-qip](https://qutip-qip.readthedocs.io/en/stable/)
 where first, a quantum circuit is defined using [`qutip-qip`](https://qutip-qip.readthedocs.io/en/stable/qip-simulator.html)
-and then run on one of the custom Chalmers processors, e.g., the 5-qubit processor
+and then run on one of the custom Chalmers processors, e.g., the processor
 called sarimner. The custom processor is defined 
-in `chalmers_qubit.sarimner.processor` and can be initialized with noise
-parameters, e.g., T1 and T2 values for each of the five qubits. Note that only
-gates with compilation instructions in `chalmers_qubit/sarimner/compiler.py`
+in `chalmers_qubit.sarimner.processor` and can be initialized with a model,
+compiler, noise, scheduler and a transpiler. 
+
+Note that only gates with compilation instructions in `chalmers_qubit/sarimner/compiler.py`
 will work for this particular processor.
 
 Notebooks exploring the usage of the simulator is available in `doc/notebooks`. 
@@ -59,14 +60,36 @@ qc = QubitCircuit(2)
 qc.add_gate("X", targets=1)
 qc.add_gate("SNOT", targets=0)
 
-# Run gate-level simulation
+# Initial state to run a simulation
+# The default assumptions is that each transmon is a qudit with 3 levels
 init_state = tensor(basis(3, 0), basis(3, 0))
 
-# Run pulse-level simulation
-processor = SarimnerProcessor(num_qubits=2)
+# Define a Model with model parameters
+model = SarimnerModel(num_qubits = 2,
+    wq=[1.0, 2.0],
+    wr=[2.0, 3.0],
+    alpha=[100, 200],
+    t1=[1, 2],
+    t2=[20, 30],
+    zz_crosstalk_static=None,
+)
+
+# Define a compiler with gate parameters and times
+compiler = SarimnerCompiler(model, g=2.0)
+
+# Initialize the processor
+processor = SarimnerProcessor(model=model, compiler=compiler)
+
+# Load the circuit that generates the pulses and run the simulation
 processor.load_circuit(qc)
+
 tlist = np.linspace(0, 20, 300)
 result = processor.run_state(init_state, tlist=tlist)
+print("Final state", result.states[-1])
+
+# Run the same circuit but with mcsolve (the initial state is a pure state)
+init_state = tensor(basis(3, 0), basis(3, 0))
+result = processor.run_state(psi0, tlist=tlist, solver="mcsolve")
 print("Final state", result.states[-1])
 ```
 
