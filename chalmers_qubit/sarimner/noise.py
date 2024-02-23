@@ -32,9 +32,9 @@ class DecoherenceNoise(Noise):
         The indices of qubits that are acted on.
     """
 
-    def __init__(self, num_qubits, dims=None, t1=None, t2=None):
+    def __init__(self, num_qubits, dims, t1, t2):
         self.num_qubits = num_qubits
-        self.dims = dims if dims is not None else [3] * num_qubits
+        self.dims = dims
         self.t1 = t1
         self.t2 = t2
 
@@ -64,8 +64,8 @@ class DecoherenceNoise(Noise):
             None, None, label="systematic_noise", spline_kind=None
         )
         for qu_ind in range(self.num_qubits):
-            t1 = self.t1
-            t2 = self.t2
+            t1 = self.t1[qu_ind]
+            t2 = self.t2[qu_ind]
             if t1 is not None:
                 op = 1 / np.sqrt(t1) * destroy(dims[qu_ind])
                 systematic_noise.add_lindblad_noise(op, qu_ind, coeff=True)
