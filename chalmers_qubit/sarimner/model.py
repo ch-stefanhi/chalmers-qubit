@@ -42,6 +42,8 @@ class SarimnerModel(Model):
         # Choose rotating frame frequency as the qubit freq
         if rotating_frame_frequencies is None:
             self.rotating_frame_frequencies = self.qubit_frequencies
+        else: 
+            self.rotating_frame_frequencies = rotating_frame_frequencies
         # Anharmonicity in (GHz)
         self.anharmonicity = anharmonicities
         # Decoherence in (ns)
