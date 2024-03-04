@@ -5,6 +5,7 @@ from chalmers_qubit.sarimner.noise import DecoherenceNoise
 
 from typing import List, Dict, Any, Optional, Tuple, Hashable
 
+__all__ = ["SarimnerModel"]
 class SarimnerModel(Model):
     """
     The processor based on the physical implementation of
@@ -30,37 +31,61 @@ class SarimnerModel(Model):
                  num_qubits: int,
                  qubit_frequencies: list, 
                  anharmonicities: list, 
-                 rotating_frame_frequencies: list = None, 
-                 dims: list = None,
-                 t1: list = None, 
-                 t2: list = None):
+                 rotating_frame_frequencies: list = None,
+                 cpl_matrix: np.ndarray = None,
+                 dims: list = None):
+
+        # Check if num_qubits is a positive integer greater than 0
+        if not isinstance(num_qubits, int) or num_qubits <= 0:
+            raise ValueError("num_qubits must be a positive integer greater than 0.")
+
+        # Check if the length of qubit_frequencies is the same as num_qubits
+        if len(qubit_frequencies) != num_qubits:
+            raise ValueError("The length of qubit_frequencies must be the same as num_qubits.")
+
+         # Check if the length of anharmonicities is the same as num_qubits
+        if len(anharmonicities) != num_qubits:
+            raise ValueError("The length of anharmonicities must be the same as num_qubits.")
         
+        if isinstance(cpl_matrix, int):
+            # Create an n x n matrix filled with zeros
+            matrix = np.zeros((num_qubits, num_qubits))
+            
+            # Fill the upper triangular part of the matrix with x
+            # NOT SURE IF THIS IS CORRECT
+            for i in range(num_qubits):
+                for j in range(i, num_qubits):
+                    matrix[i, j] = cpl_matrix
+            cpl_matrix = matrix
+            
+        elif isinstance(cpl_matrix, np.ndarray) is False and cpl_matrix is not None: 
+            raise ValueError("cpl_matrix should be type int or numpy.ndarray.")
+        
+        # Initialize class variables if all checks pass
         self.num_qubits = num_qubits
+        self.qubit_frequencies = qubit_frequencies # Qubit frequency in (GHz)
+        self.anharmonicity = anharmonicities # Anharmonicity in (GHz)
+        self.cpl_matrix = cpl_matrix # coupling matrix
         self.dims = dims if dims is not None else [3] * num_qubits
-        # Qubit frequency in (GHz)
-        self.qubit_frequencies = qubit_frequencies
+
         # Choose rotating frame frequency as the qubit freq
         if rotating_frame_frequencies is None:
             self.rotating_frame_frequencies = self.qubit_frequencies
         else: 
             self.rotating_frame_frequencies = rotating_frame_frequencies
-        # Anharmonicity in (GHz)
-        self.anharmonicity = anharmonicities
-        # Decoherence in (ns)
-        self.t1 = t1
-        self.t2 = t2
 
         self.params = {
             "wq": self.qubit_frequencies,
             "alpha": self.anharmonicity,
             "wr": self.rotating_frame_frequencies,
+            "cpl_matrix": self.cpl_matrix
         }
 
+        # setup drift, controls an noise
         self._drift = self._set_up_drift()
         self._controls = self._set_up_controls()
-
-        if t1 is not None and t2 is not None:
-            self._noise = [DecoherenceNoise(self.num_qubits, self.dims, t1=t1, t2=t2)]
+        # init empty noise list
+        self._noise = []
 
     def _set_up_drift(self):
         drift = []
@@ -88,16 +113,16 @@ class SarimnerModel(Model):
             controls["X" + str(m)] = (destroy_op.dag() + destroy_op, [m])
             controls["Y" + str(m)] = (1j*(destroy_op.dag() - destroy_op), [m])
 
-        for m in range(self.num_qubits - 1):
-            for n in range(m + 1, self.num_qubits):
-                d1 = dims[m]
-                d2 = dims[n]
-                destroy_op1 = destroy(d1)
-                destroy_op2 = destroy(d2)
-                op1 = tensor(destroy_op1.dag(), destroy_op2)
-                op2 = tensor(destroy_op1, destroy_op2.dag())
-                controls["ab" + str(m) + str(n)] = (op1, [m, n])
-                controls["ba" + str(m) + str(n)] = (op2, [m, n])
+        if self.cpl_matrix is not None:
+            # Looping through non-zero elements of the coupling matrix
+            for (m, n), value in np.ndenumerate(self.cpl_matrix):
+                if value != 0:
+                    destroy_op1 = destroy(dims[m])
+                    destroy_op2 = destroy(dims[n])
+                    op1 = tensor(destroy_op1.dag(), destroy_op2)
+                    op2 = tensor(destroy_op1, destroy_op2.dag())
+                    controls["ab" + str(m) + str(n)] = (op1, [m, n])
+                    controls["ba" + str(m) + str(n)] = (op2, [m, n])
 
         return controls
 

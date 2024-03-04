@@ -33,11 +33,10 @@ class SarimnerCompiler(GateCompiler):
         It saves the decomposition scheme for each gate.
     """
 
-    def __init__(self, num_qubits, params):
+    def __init__(self, num_qubits:int, params:dict):
         super().__init__(num_qubits, params=params)
         self.params = params
-        self.g = 2 * np.pi * 1 * 1e-3
-        
+
         self.gate_compiler.update(
             {
                 "RZ": self.rz_compiler,
@@ -47,24 +46,26 @@ class SarimnerCompiler(GateCompiler):
                 "CCZS": self.cczs_compiler,
                 "GLOBALPHASE": self.globalphase_compiler,
             })
+        # initialise the global phase for all the qubits to 0.
         self.phase = [0] * num_qubits
 
     def coupling(self, t, y: bool, args: dict) -> np.ndarray:
         omega_drive = args['drivefreq']
         delta = args['detuning']
         phi = args['phase']
+        g = args['coupling_strength']
         if y:
-            coeff = self.g * np.sin(omega_drive * t + phi) * \
+            coeff = g * np.sin(omega_drive * t + phi) * \
                 np.exp(1j * delta * t)
         else:
-            coeff = self.g * np.sin(omega_drive * t + phi) * \
+            coeff = g * np.sin(omega_drive * t + phi) * \
                 np.exp(- 1j * delta * t)
         return coeff
 
     def drive_coeff(self, t: np.ndarray, y: bool, args: dict) -> np.ndarray:
         # Amplitude, needs to be optimized to get perfect pi-pulse or pi/2-pulse
         amp = args['amp']
-        # DRAG-parameter, needs to be optimized to get no phase errors in as pi/2-pulse
+        # DRAG-parameter, needs to be optimized to get no phase errors for a pi/2-pulse
         qscale = args['qscale']
         drive_freq = args['freq']
         phi = args['phase']
@@ -84,7 +85,7 @@ class SarimnerCompiler(GateCompiler):
 
     def rz_compiler(self, gate, args):
         """
-        Compiler for the RZ gate
+        Compiler for the Virtual-RZ gate
 
         Parameters
         ----------
@@ -95,10 +96,6 @@ class SarimnerCompiler(GateCompiler):
             :obj:`.GateCompiler.args` or given as a parameter in
             :obj:`.GateCompiler.compile`.
 
-        Returns
-        -------
-        A list of :obj:`.Instruction`, including the compiled pulse
-        information for this gate.
         """
         q = gate.targets[0]  # target qubit
         self.phase[q] += gate.arg_value
@@ -238,18 +235,24 @@ class SarimnerCompiler(GateCompiler):
         q1 = gate.controls[0]
         q2 = gate.targets[0]
 
-        t_total = np.sqrt(2) * np.pi / self.g
-        tlist = np.linspace(0, t_total, 5000)
-
         omega1 = self.params["wq"][q1]
         omega1_rot = self.params["wr"][q1]
         omega2 = self.params["wq"][q2]
         omega2_rot = self.params["wr"][q2]
         alpha1 = self.params["alpha"][q1]
+        coupling_strength = self.params["cpl_matrix"][q1,q2]
+
+        t_total = np.sqrt(2) * np.pi / coupling_strength
+        tlist = np.linspace(0, t_total, 5000)
+
+        # Check if qubit q1 and q2 are coupled together
+        if coupling_strength is 0:
+            raise ValueError(f"Qubit {q1} and {q2} are not coupled together.")
 
         args = {'drivefreq': abs(omega1 + alpha1 - omega2),
                 'detuning': (omega1_rot - omega2_rot),
-                'phase': 0}
+                'phase': 0,
+                'coupling_strength': coupling_strength}
 
         pulse_info = [("ab" + str(q1) + str(q2), self.coupling(tlist, True, args)),
                       ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args))]

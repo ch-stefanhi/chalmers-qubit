@@ -1,6 +1,9 @@
+from qutip import propagator
 from qutip_qip.device import Processor
+from qutip_qip.compiler import GateCompiler
 
-from chalmers_qubit.sarimner.model import SarimnerModel
+from chalmers_qubit.base.model import Model
+from chalmers_qubit.base.noise import Noise
 from chalmers_qubit.sarimner.compiler import SarimnerCompiler
 
 
@@ -10,36 +13,42 @@ class SarimnerProcessor(Processor):
 
     Parameters
     ----------
-    num_qubits: int
-        The number of qubits in the system.
-    dims: list, optional
-        The dimension of each component system.
-        Default value is a qubit system of ``dim=[2,2,2,...,2]``.
+    
     """
 
-    def __init__(self, 
-                 num_qubits,
-                 qubit_frequencies: list, 
-                 anharmonicities: list, 
-                 rotating_frame_frequencies: list = None, 
-                 dims: list = None,
-                 t1: list = None, 
-                 t2: list = None):
+    def __init__(self,
+                 model:Model,
+                 compiler:GateCompiler = None,
+                 noise:list = None):
+        
+        self.model = model
 
-        self.model = SarimnerModel(
-                        num_qubits=num_qubits,
-                        qubit_frequencies=qubit_frequencies, 
-                        anharmonicities=anharmonicities, 
-                        rotating_frame_frequencies=rotating_frame_frequencies, 
-                        dims=dims,
-                        t1=t1, 
-                        t2=t2,
-                    )
+        if compiler is None:
+            self._default_compiler = SarimnerCompiler
+        else:
+            self._default_compiler = compiler
+
+        if noise is not None:
+            for elem in noise:
+                self.add_noise(elem)
         
         super(SarimnerProcessor, self).__init__(model=self.model)
         self.native_gates = None
-        self._default_compiler = SarimnerCompiler
         self.pulse_mode = "discrete"
+
+    def add_noise(self, noise):
+        """
+        Add a noise object to the processor.
+
+        Parameters
+        ----------
+        noise : :class:`.Noise`
+            The noise object defined outside the processor.
+        """
+        if isinstance(noise, Noise):
+            self.model._add_noise(noise)
+        else:
+            raise TypeError("Input is not a Noise object.")
 
     def load_circuit(self, qc, schedule_mode="ASAP", compiler=None):
         """
@@ -78,3 +87,42 @@ class SarimnerProcessor(Processor):
         self.set_coeffs(coeffs)
         self.set_tlist(tlist)
         return tlist, coeffs
+    
+    def run_propagator(self, qc=None, noisy=False, **kwargs):
+        """
+        Parameters
+        ----------
+        qc: :class:`qutip.qip.QubitCircuit`, optional
+            A quantum circuit. If given, it first calls the ``load_circuit``
+            and then calculate the evolution.
+        states: :class:`qutip.Qobj`, optional
+         Old API, same as init_state.
+        **kwargs
+           Keyword arguments for the qutip solver.
+        Returns
+        -------
+        evo_result: :class:`qutip.Result`
+            If ``analytical`` is False,  an instance of the class
+            :class:`qutip.Result` will be returned.
+            If ``analytical`` is True, a list of matrices representation
+            is returned.
+        """
+        if qc is not None:
+            self.load_circuit(qc)
+        # construct qobjevo for unitary evolution
+        noisy_qobjevo, c_ops = self.get_qobjevo(noisy=noisy)
+
+        # time steps
+        tlist = noisy_qobjevo.tlist
+        H = noisy_qobjevo.to_list()
+
+        # Compute drift Hamiltonians
+        H_drift = 0
+        drift = self._get_drift_obj()
+        for drift_ham in drift.drift_hamiltonians:
+            H_drift += drift_ham.get_qobj(self.dims)
+        H[0] = H_drift
+
+        # compute the propagator
+        evo_result = propagator(H=H, t=tlist, c_op_list=c_ops, **kwargs)
+        return evo_result
