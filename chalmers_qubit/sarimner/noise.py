@@ -97,8 +97,8 @@ class ZZCrossTalk(Noise):
         Parameters computed from a :class:`.SCQubits`.
     """
 
-    def __init__(self, params):
-        self.params = params
+    def __init__(self, cross_talk_matrix):
+        self.ctm = cross_talk_matrix
 
     def get_noisy_pulses(self, dims=None, pulses=None, systematic_noise=None):
         """
@@ -130,7 +130,7 @@ class ZZCrossTalk(Noise):
             d2 = dims[i + 1]
             
             zz_op = tensor(num(d1), num(d2))
-            zz_coeff = cross_talk_matrix[i,j]
+            zz_coeff = self.ctm[i,i+1]
 
             systematic_noise.add_control_noise(
                 zz_coeff * zz_op,
