@@ -1,127 +1,116 @@
-from abc import ABC, abstractmethod
+from copy import deepcopy
+from typing import List, Tuple, Hashable
+from qutip import Qobj
+from chalmers_qubit.base.noise import Noise
 
-
-class Model(ABC):
+class Model:
     """
-    Abstract base class representing a physical model for quantum hardware simulation.
-
-    This class serves as a template for defining the Hamiltonians (both control and drift)
-    associated with quantum hardware models. Subclasses should implement the methods
-    `setup_controls` and `setup_drift` to define the specific Hamiltonians for their
-    quantum hardware.
+    Template class for a physical model representing quantum hardware.
+    The concrete model class does not have to inherit from this,
+    as long as the following methods are defined.
 
     Parameters
     ----------
-    num_qubits : int
-        The number of qubits in the quantum hardware model.
+    num_The number of qubits
+        The number of qubits.
     dims : list, optional
-        The dimensions of each qubit system. For instance, [2, 2, 2] for a three-qubit system.
-        Default is [3, 3, 3, ..., 3] for `num_qubits` qubits.
-    **params : dict
-        Additional parameters specific to the quantum hardware model, such as frequencies,
-        anharmonicities, coupling strengths, etc.
+        The dimension of each component system.
+        Default value is a qubit system of ``dim=[2,2,2,...,2]``.
+    **params :
+        Hardware parameters for the model.
 
     Attributes
     ----------
-    num_qubits : int
+    num_The number of qubits
         The number of qubits.
-    dims : list
-        The dimensions of each component in the quantum system.
-    controls : dict of {str: (Qobj, int)}
-        A dictionary to store control Hamiltonian where the key defines a
-        string representation of the Hamiltonian and the values are
-        tuples of (Qobj, list) representing the operator and the qubit
-        e.g., {"sx": (sigmax(), 0)}.
-    drift : dict of {str: (Qobj, int)}
-        A dictionary to store drift Hamiltonian terms where the key defines a
-        string representation of the Hamiltonian and the values are
-        tuples of (Qobj, list), e.g., {"a": (destroy(self.dims[0]), 0)}.
+    dims : list, optional
+        The dimension of each component system.
     params : dict
-        Hardware-specific parameters.
-
-    Examples
-    --------
-    A subclass can implement the Model class like this:
-
-    class CustomQubitModel(Model):
-        def __init__(self, num_qubits, **params):
-            super().__init__(num_qubits, **params)
-            # Additional initialization if needed
-
-        def setup_controls(self):
-            # Implementation of control Hamiltonians
-            pass
-
-        def setup_drift(self):
-            # Implementation of drift Hamiltonians
-            pass
+        Hardware parameters for the model.
     """
 
     def __init__(self, num_qubits, dims=None, **params):
-        if dims is None:
-            dims = [3] * num_qubits
-        self.num_qubits = num_qubits
-        self.dims = dims
-        self.params = params
+        self.num_qubits = num_qubits if num_qubits is not None else N
+        self.dims = dims if dims is not None else num_qubits * [2]
+        self.params = deepcopy(params)
         self._controls = {}
-        self._drift = {}
+        self._drift = []
+        self._noise = []
 
-    @abstractmethod
-    def setup_controls(self):
+    def get_all_drift(self) -> List[Tuple[Qobj, List[int]]]:
         """
-        Abstract method to create and add control Hamiltonian terms to the model.
-
-        Subclasses should override this method to define the control Hamiltonians
-        specific to their quantum hardware model.
-
-        Example:
-        --------
-        def setup_controls(self):
-            for qubit in range(self.num_qubits):
-                # Define control Hamiltonian for each qubit
-                pass
-        """
-        # self._controls = ...
-        pass
-
-    @abstractmethod
-    def setup_drift(self):
-        """
-        Abstract method to create and add drift Hamiltonian terms to the model.
-
-        Subclasses should override this method to define the drift Hamiltonians
-        specific to their quantum hardware model.
-
-        Example:
-        --------
-        def setup_drift(self):
-            for qubit in range(self.num_qubits):
-                # Define drift Hamiltonian for each qubit
-                pass
-        """
-        # self._drift = ...
-        pass
-
-    @property
-    def controls(self):
-        """
-        Property to get the control Hamiltonian terms.
+        Get all the drift Hamiltonians.
 
         Returns
         -------
-        dict
-            A dictionary containing the control Hamiltonian terms.
-        """
-        return self._controls
-
-    @property
-    def drift(self):
-        """
-        Property to get the drift Hamiltonian terms.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the drift Hamiltonian terms.
+        drift_hamiltonian_list : list
+            A list of drift Hamiltonians in the form of
+            ``[(qobj, targets), ...]``.
         """
         return self._drift
+
+    def get_control(self, label: Hashable) -> Tuple[Qobj, List[int]]:
+        """
+        Get the control Hamiltonian corresponding to the label.
+
+        Parameters
+        ----------
+        label : hashable object
+            A label that identifies the Hamiltonian.
+
+        Returns
+        -------
+        control_hamiltonian : tuple
+            The control Hamiltonian in the form of ``(qobj, targets)``.
+        """
+        return self._controls[label]
+
+    def get_control_labels(self) -> List[Hashable]:
+        """
+        Get a list of all available control Hamiltonians.
+        Optional, required only when plotting the pulses or
+        using the optimal control algorithm.
+
+        Returns
+        -------
+        label_list : list of hashable objects
+            A list of hashable objects each corresponds to
+            an available control Hamiltonian.
+        """
+        return list(self._controls.keys())
+
+    def get_noise(self) -> List[Noise]:
+        """
+        Get a list of :obj:`.Noise` objects.
+        Single qubit relaxation (T1, T2) are not included here.
+        Optional method.
+
+        Returns
+        -------
+        noise_list : list
+            A list of :obj:`.Noise`.
+        """
+        if not hasattr(self, "_noise"):
+            return []
+        return self._noise
+
+    def _add_drift(self, qobj, targets):
+        if not hasattr(self, "_drift"):
+            raise NotImplementedError(
+                "The model does not support adding drift."
+            )
+        self._drift.append((qobj, targets))
+
+    def _add_control(self, label, qobj, targets):
+        if not hasattr(self, "_controls"):
+            raise NotImplementedError(
+                "The model does not support adding controls."
+            )
+        self._controls[label] = (qobj, targets)
+
+    def _add_noise(self, noise):
+        if not hasattr(self, "_noise"):
+            raise NotImplementedError(
+                "The model does not support adding noise objects."
+            )
+        self._noise.append(noise)

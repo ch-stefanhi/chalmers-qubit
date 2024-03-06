@@ -25,14 +25,10 @@ class Processor(ABC):
         self,
         model=None,
         compiler=None,
-        scheduler=None,
-        transpiler=None,
         noise=None,
     ):
         self.model = model
         self.compiler = compiler
-        self.scheduler = scheduler
-        self.transpiler = transpiler
         self.noise = noise
 
         # The pulses will be created after a quantum circuit has been loaded
@@ -60,25 +56,6 @@ class Processor(ABC):
         
         # Save compiler pulses
         return tlist, coeffs
-    
-    @abstractmethod
-    def transpile(self, qc: QubitCircuit)-> (list, list):
-        """
-        Converts the circuit to one that can be executed on given hardware if
-        the gates in the circuit are not in the supported gates.
-
-        Parameters
-        ----------
-        qc: :class:`.QubitCircuit`
-            The input quantum circuit.
-
-        Returns
-        -------
-        qc: :class:`QubitCircuit`
-            The transpiled quantum circuit.
-        """
-        # ...
-        return qc
 
     def run_state(self, init_state=None, solver="mesolve", **kwargs):
         # Generate time-dependent Hamiltonian using the pulses
