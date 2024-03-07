@@ -43,6 +43,7 @@ class SarimnerCompiler(GateCompiler):
                 "RX": self.rx_compiler,
                 "RY": self.ry_compiler,
                 "CZ": self.cz_compiler,
+                "ISWAP": self.iswap_compiler,
                 "CCZS": self.cczs_compiler,
                 "GLOBALPHASE": self.globalphase_compiler,
             })
@@ -55,11 +56,9 @@ class SarimnerCompiler(GateCompiler):
         phi = args['phase']
         g = args['coupling_strength']
         if y:
-            coeff = g * np.sin(omega_drive * t + phi) * \
-                np.exp(1j * delta * t)
+            coeff = g * np.sin(omega_drive * t + phi) * np.cos(delta * t)
         else:
-            coeff = g * np.sin(omega_drive * t + phi) * \
-                np.exp(- 1j * delta * t)
+            coeff = g * np.sin(omega_drive * t + phi) * np.sin(delta * t)
         return coeff
 
     def drive_coeff(self, t: np.ndarray, y: bool, args: dict) -> np.ndarray:
@@ -213,6 +212,50 @@ class SarimnerCompiler(GateCompiler):
         ]
 
         return [Instruction(gate, tlist, pulse_info, t_total)]
+    
+    def iswap_compiler(self, gate, args):
+        """
+        Compiler for ISWAP gate.
+
+        Parameters
+        ----------
+        gate : :obj:`.Gate`:
+            The quantum gate to be compiled.
+        args : dict
+            The compilation configuration defined in the attributes
+            :obj:`.GateCompiler.args` or given as a parameter in
+            :obj:`.GateCompiler.compile`.
+
+        Returns
+        -------
+        A list of :obj:`.Instruction`, including the compiled pulse
+        information for this gate.
+        """
+        q1 = gate.controls[0]
+        q2 = gate.targets[0]
+
+        omega1 = self.params["wq"][q1]
+        omega1_rot = self.params["wr"][q1]
+        omega2 = self.params["wq"][q2]
+        omega2_rot = self.params["wr"][q2]
+        coupling_strength = self.params["cpl_matrix"][q1,q2]
+
+        t_total = np.pi / coupling_strength
+        tlist = np.linspace(0, t_total, 5000)
+
+        # Check if qubit q1 and q2 are coupled together
+        if coupling_strength == 0:
+            raise ValueError(f"Qubit {q1} and {q2} are not coupled together.")
+
+        args = {'drivefreq': abs(omega1 - omega2),
+                'detuning': (omega1_rot - omega2_rot),
+                'phase': 0,
+                'coupling_strength': coupling_strength}
+
+        pulse_info = [("ab" + str(q1) + str(q2), self.coupling(tlist, True, args)),
+                      ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args))]
+
+        return [Instruction(gate, tlist, pulse_info, t_total)]
 
     def cz_compiler(self, gate, args):
         """
@@ -246,13 +289,13 @@ class SarimnerCompiler(GateCompiler):
         tlist = np.linspace(0, t_total, 5000)
 
         # Check if qubit q1 and q2 are coupled together
-        if coupling_strength is 0:
+        if coupling_strength == 0:
             raise ValueError(f"Qubit {q1} and {q2} are not coupled together.")
 
-        args = {'drivefreq': abs(omega1 + alpha1 - omega2),
+        args = {'coupling_strength': coupling_strength,
+                'drivefreq': abs(omega1 + alpha1 - omega2),
                 'detuning': (omega1_rot - omega2_rot),
-                'phase': 0,
-                'coupling_strength': coupling_strength}
+                'phase': 0}
 
         pulse_info = [("ab" + str(q1) + str(q2), self.coupling(tlist, True, args)),
                       ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args))]
@@ -282,10 +325,7 @@ class SarimnerCompiler(GateCompiler):
         q3 = gate.targets[2]
         theta, phi, gamma = gate.arg_value
 
-        # gate time
-        t_total = np.pi / self.g
-        tlist = np.linspace(0, t_total, 5000)
-
+        # define parameters
         omega1 = self.params["wq"][q1]
         omega2 = self.params["wq"][q2]
         omega3 = self.params["wq"][q3]
@@ -293,17 +333,32 @@ class SarimnerCompiler(GateCompiler):
         omega2_rot = self.params["wr"][q2]
         omega3_rot = self.params["wr"][q3]
         alpha1 = self.params["alpha"][q1]
+        g1 = self.params["cpl_matrix"][q1,q2]
+        g2 = self.params["cpl_matrix"][q1,q3]
+
+        # Check if qubit q1 and q2 and q1 and q3 are coupled together
+        if g1 == 0:
+            raise ValueError(f"Qubit {q1} and {q2} are not coupled together.")
+        elif g2 == 0:
+            raise ValueError(f"Qubit {q1} and {q3} are not coupled together.")
 
         omega1_drive = abs(omega1 + alpha1 - omega2)
         omega2_drive = abs(omega1 + alpha1 - omega3)
 
         # We do simultaneous drive
-        args1 = {"drivefreq": omega1_drive,
+        args1 = {"coupling_strength": g1,
+                 "drivefreq": omega1_drive,
                  "detuning": (omega1_rot - omega2_rot),
                  "phase": 0}
-        args2 = {"drivefreq": omega2_drive,
+        args2 = {"coupling_strength": g2,
+                 "drivefreq": omega2_drive,
                  "detuning": (omega1_rot - omega3_rot),
                  "phase": phi - np.pi}
+        
+        # gate time
+        g = np.sqrt(np.abs(g1)**2 + np.abs(g2)**2)
+        t_total = np.sqrt(2) * np.pi / g
+        tlist = np.linspace(0, t_total, 5000)
 
         pulse_info = [
             ("ab" + str(q1) + str(q2), self.coupling(tlist, True, args1)),
