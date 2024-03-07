@@ -121,8 +121,8 @@ class SarimnerModel(Model):
                     destroy_op2 = destroy(dims[n])
                     op1 = tensor(destroy_op1.dag(), destroy_op2)
                     op2 = tensor(destroy_op1, destroy_op2.dag())
-                    controls["ab" + str(m) + str(n)] = (op1, [m, n])
-                    controls["ba" + str(m) + str(n)] = (op2, [m, n])
+                    controls["ab" + str(m) + str(n)] = (op1+op2, [m, n])
+                    controls["ba" + str(m) + str(n)] = (1j*(op1-op2), [m, n])
 
         return controls
 
@@ -144,10 +144,8 @@ class SarimnerModel(Model):
 
         for m in range(num_qubits - 1):
             for n in range(m + 1, num_qubits):
-                label_zz[f"ab{m}{n}"] = r"$a^\dagger_{" + \
-                    f"{m}" + r"}a_{" + f"{n}" + r"}$"
-                label_zz[f"ba{m}{n}"] = r"$a^\dagger_{" + \
-                    f"{n}" + r"}a_{" + f"{m}" + r"}$"
+                label_zz[f"ab{m}{n}"] = r"$a^\dagger_{"+ f"{m}" + r"}a_{" + f"{n}" + r"} + a^\dagger_{" + f"{n}" + r"}a_{" + f"{m}" + r"}$"
+                label_zz[f"ba{m}{n}"] = r"$i(a^\dagger_{"+ f"{m}" + r"}a_{" + f"{n}" + r"} - a^\dagger_{" + f"{n}" + r"}a_{" + f"{m}" + r"})$"
 
         labels.append(label_zz)
         return labels
