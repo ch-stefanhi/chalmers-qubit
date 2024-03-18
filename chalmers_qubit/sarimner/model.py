@@ -1,9 +1,6 @@
 import numpy as np
 from qutip import destroy, tensor
 from chalmers_qubit.base.model import Model
-from chalmers_qubit.sarimner.noise import DecoherenceNoise
-
-from typing import List, Dict, Any, Optional, Tuple, Hashable
 
 __all__ = ["SarimnerModel"]
 class SarimnerModel(Model):
@@ -28,20 +25,14 @@ class SarimnerModel(Model):
     """
 
     def __init__(self, 
-                 num_qubits: int,
                  qubit_frequencies: list, 
                  anharmonicities: list, 
                  rotating_frame_frequencies: list = None,
                  cpl_matrix: np.ndarray = None,
                  dims: list = None):
-
-        # Check if num_qubits is a positive integer greater than 0
-        if not isinstance(num_qubits, int) or num_qubits <= 0:
-            raise ValueError("num_qubits must be a positive integer greater than 0.")
-
-        # Check if the length of qubit_frequencies is the same as num_qubits
-        if len(qubit_frequencies) != num_qubits:
-            raise ValueError("The length of qubit_frequencies must be the same as num_qubits.")
+        
+        # number of qubits
+        num_qubits = len(qubit_frequencies)
 
          # Check if the length of anharmonicities is the same as num_qubits
         if len(anharmonicities) != num_qubits:

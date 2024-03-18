@@ -2,9 +2,11 @@ import numpy as np
 
 from qutip import destroy, num, tensor
 from qutip_qip.pulse import Pulse
+
 from chalmers_qubit.base.noise import Noise
 
 __all__ = ["DecoherenceNoise", "ZZCrossTalk"]
+
 class DecoherenceNoise(Noise):
     """
     The decoherence on each qubit characterized by two time scales t1 and t2.
@@ -33,9 +35,12 @@ class DecoherenceNoise(Noise):
         The indices of qubits that are acted on.
     """
 
-    def __init__(self, num_qubits, t1, t2, dims=None):
-        self.num_qubits = num_qubits
-        self.dims = dims if dims is not None else [3] * num_qubits
+    def __init__(self, t1, t2, dims=None):
+        if len(t1) != len(t2):
+            raise ValueError("The length of t1 and t2 must be the same.")
+
+        self.num_qubits = len(t1)
+        self.dims = dims if dims is not None else [3] * self.num_qubits
         self.t1 = t1
         self.t2 = t2
 
@@ -61,9 +66,9 @@ class DecoherenceNoise(Noise):
         systematic_noise : :class:`.Pulse`
             The dummy pulse representing pulse-independent noise.
         """
-        systematic_noise = Pulse(
-            None, None, label="systematic_noise", spline_kind=None
-        )
+        if systematic_noise is None:
+            systematic_noise = Pulse(None, None, label="system")
+
         for qu_ind in range(self.num_qubits):
             t1 = self.t1[qu_ind]
             t2 = self.t2[qu_ind]
@@ -84,7 +89,7 @@ class DecoherenceNoise(Noise):
                 op = 1 / np.sqrt(2 * T2_eff) * 2 * num(dims[qu_ind])
                 systematic_noise.add_lindblad_noise(op, qu_ind, coeff=True)
         return pulses, systematic_noise
-    
+
 
 class ZZCrossTalk(Noise):
     """
@@ -97,8 +102,10 @@ class ZZCrossTalk(Noise):
         Parameters computed from a :class:`.SCQubits`.
     """
 
-    def __init__(self, cross_talk_matrix):
+    def __init__(self, cross_talk_matrix, dims=None):
         self.ctm = cross_talk_matrix
+        self.num_qubits, _ = self.ctm.shape
+        self.dims = dims if dims is not None else [3] * self.num_qubits
 
     def get_noisy_pulses(self, dims=None, pulses=None, systematic_noise=None):
         """
@@ -122,9 +129,6 @@ class ZZCrossTalk(Noise):
         systematic_noise : :class:`.Pulse`
             The dummy pulse representing pulse-independent noise.
         """
-        systematic_noise = Pulse(
-            None, None, label="systematic_noise", spline_kind=None
-        )
         for i in range(len(dims) - 1):
             d1 = dims[i]
             d2 = dims[i + 1]
