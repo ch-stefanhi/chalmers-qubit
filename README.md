@@ -17,21 +17,21 @@ Quantum Toolbox in Python. The requirements are already specified in the
 `setup.py` file and you can install the package `chalmers_qubit` simply by
 downloading this folder or cloning this repository and running:
 
-```
+``` zsh
 pip install .
 ```
 
 It might be beneficial to install an editable version. In the editable version,
 changes to the code are reflected system-wide without requiring a reinstallation.
 
-```
+``` zsh
 pip install -e .
 ```
 
 If you do not care about making changes to the source code and just want to
 try out the package (e.g., from Google Colab), you can do a git+ install with
 
-```
+``` zsh
 pip install git+https://github.com/aqp-mc2-chalmers/chalmers-qubit.git
 ```
 
@@ -41,55 +41,58 @@ The usage of the package follows [qutip-qip](https://qutip-qip.readthedocs.io/en
 where first, a quantum circuit is defined using [`qutip-qip`](https://qutip-qip.readthedocs.io/en/stable/qip-simulator.html)
 and then run on one of the custom Chalmers processors, e.g., the processor
 called sarimner. The custom processor is defined 
-in `chalmers_qubit.sarimner.processor` and can be initialized with a model,
-compiler, noise, scheduler and a transpiler. 
+in `chalmers_qubit.sarimner.processor` and can be initialized with a `model`,
+`compiler` and `noise`. 
 
 Note that only gates with compilation instructions in `chalmers_qubit/sarimner/compiler.py`
 will work for this particular processor.
 
-Notebooks exploring the usage of the simulator is available in `doc/notebooks`. 
+Notebooks exploring the usage of the simulator is available in `examples/`. 
 
-```
+``` python
 import numpy as np
 from qutip import basis, tensor
 from qutip_qip.circuit import QubitCircuit
-from chalmers_qubit.sarimner.processor import SarimnerProcessor
+from chalmers_qubit.sarimner import SarimnerProcessor, SarimnerModel, SarimnerCompiler, DecoherenceNoise, ZZCrossTalk
 
 # Define a circuit
 qc = QubitCircuit(2)
-qc.add_gate("X", targets=1)
-qc.add_gate("SNOT", targets=0)
-
-# Initial state to run a simulation
-# The default assumptions is that each transmon is a qudit with 3 levels
-init_state = tensor(basis(3, 0), basis(3, 0))
+qc.add_gate("RX", targets=0, arg_value=np.pi/2)
+qc.add_gate("RY", targets=1, arg_value=np.pi/2)
+qc.add_gate("CZ", controls=0, targets=1)
 
 # Define a Model with model parameters
-model = SarimnerModel(num_qubits = 2,
-    wq=[1.0, 2.0],
-    wr=[2.0, 3.0],
-    alpha=[100, 200],
-    t1=[1, 2],
-    t2=[20, 30],
-    zz_crosstalk_static=None,
+# All frequencies are defined in GHz, and times in ns.
+model = SarimnerModel(
+    qubit_frequencies=[2 * np.pi * 5.0, 2 * np.pi * 5.4],
+    anharmonicities=[- 2 * np.pi * 0.3, - 2 * np.pi * 0.3],
+    cpl_matrix=np.array([[0, 1e-4],[0, 0]])
 )
 
-# Define a compiler with gate parameters and times
-compiler = SarimnerCompiler(model, g=2.0)
+# Load a compiler
+compiler = SarimnerCompiler
+
+# Define all the noise objects as a list.
+noise = [DecoherenceNoise(t1=[60*1e3, 70*1e3], 
+                          t2=[100*1e3, 120*1e3]),
+         ZZCrossTalk(cross_talk_matrix=np.array([[0, 1e-4],[0, 0]]))]
 
 # Initialize the processor
-processor = SarimnerProcessor(model=model, compiler=compiler)
+processor = SarimnerProcessor(model=model, compiler=compiler, noise=noise)
 
 # Load the circuit that generates the pulses and run the simulation
-processor.load_circuit(qc)
+tlist, coeffs = processor.load_circuit(qc)
 
-tlist = np.linspace(0, 20, 300)
-result = processor.run_state(init_state, tlist=tlist)
+# Initial state for the simulation.
+# The default assumptions is that each transmon is a qudit with 3 levels.
+init_state = tensor(basis(3, 1), basis(3, 1))
+
+# Run master equation simulation
+result = processor.run_state(init_state)
 print("Final state", result.states[-1])
 
-# Run the same circuit but with mcsolve (the initial state is a pure state)
-init_state = tensor(basis(3, 0), basis(3, 0))
-result = processor.run_state(psi0, tlist=tlist, solver="mcsolve")
+# Run the same circuit but with mcsolve using 100 trajectories.
+result = processor.run_state(init_state, solver="mcsolve", ntraj=100)
 print("Final state", result.states[-1])
 ```
 
@@ -97,8 +100,8 @@ It is also possible to import QASM circuits.
 
 # Development
 
-In order to add new custom pulses or modify the device, edit the processor, 
-compiler or scheduler following the tutorials and detailed instructions in
+In order to add new custom pulses or modify the device, edit the processor, or 
+compiler the tutorials and detailed instructions in
 [qutip-qip](https://qutip-qip.readthedocs.io/en/stable/).
 
 The [tutorials](https://qutip.org/qutip-tutorials/) show examples of how to
@@ -111,5 +114,5 @@ immediately system-wide without requiring a reinstallation of the package.
 This package was built from contributions by Pontus Vikstål, Kamanasish Debnath
 and Shahnawaz Ahmed.
 
-Contact shahnawaz.ahmed95@gmail.com or anton.frisk.kockum@chalmers.se 
+Contact vikstal@chalmers.se, shahnawaz.ahmed95@gmail.com or anton.frisk.kockum@chalmers.se 
 for help and support.
