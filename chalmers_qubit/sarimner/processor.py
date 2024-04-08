@@ -6,7 +6,6 @@ from chalmers_qubit.base.model import Model
 from chalmers_qubit.base.noise import Noise
 from chalmers_qubit.sarimner.compiler import SarimnerCompiler
 
-
 class SarimnerProcessor(Processor):
     """
     Description goes here
@@ -20,21 +19,23 @@ class SarimnerProcessor(Processor):
                  model:Model,
                  compiler:GateCompiler = None,
                  noise:list = None):
-        
+
         self.model = model
 
         if compiler is None:
-            self._default_compiler = SarimnerCompiler
+            self._default_compiler = SarimnerCompiler(model=model)
         else:
             self._default_compiler = compiler
 
         if noise is not None:
             for elem in noise:
                 self.add_noise(elem)
-        
+
         super(SarimnerProcessor, self).__init__(model=self.model)
         self.native_gates = None
         self.pulse_mode = "discrete"
+        # Initialize global phase to 0
+        self.global_phase = 0
 
     def add_noise(self, noise):
         """
@@ -76,18 +77,22 @@ class SarimnerProcessor(Processor):
         """
         # Choose a compiler and compile the circuit
         if compiler is None and self._default_compiler is not None:
-            compiler = self._default_compiler(self.num_qubits, self.params)
+            compiler = self._default_compiler
         if compiler is not None:
             tlist, coeffs = compiler.compile(
                 qc.gates, schedule_mode=schedule_mode
             )
         else:
             raise ValueError("No compiler defined.")
+
+        # Update global phase
+        self.global_phase = compiler.global_phase
+
         # Save compiler pulses
         self.set_coeffs(coeffs)
         self.set_tlist(tlist)
         return tlist, coeffs
-    
+
     def run_propagator(self, qc=None, noisy=False, **kwargs):
         """
         Parameters
