@@ -33,7 +33,7 @@ class Compiler(ABC):
     def __init__(self, model, **params):
         self.model = model
         self.params = params
-        self.gate_compilers = {"RX": self.rx_compiler}
+        self.gate_compilers = {}
         self._pulses = {}
         self._tlist = []
     

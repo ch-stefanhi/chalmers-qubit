@@ -53,29 +53,36 @@ Notebooks exploring the usage of the simulator is available in `examples/`.
 import numpy as np
 from qutip import basis, tensor
 from qutip_qip.circuit import QubitCircuit
-from chalmers_qubit.sarimner import SarimnerProcessor, SarimnerModel, SarimnerCompiler, DecoherenceNoise, ZZCrossTalk
+from chalmers_qubit.sarimner import (
+    SarimnerProcessor,
+    SarimnerModel,
+    SarimnerCompiler,
+    DecoherenceNoise,
+    ZZCrossTalk,
+)
 
 # Define a circuit
 qc = QubitCircuit(2)
-qc.add_gate("RX", targets=0, arg_value=np.pi/2)
-qc.add_gate("RY", targets=1, arg_value=np.pi/2)
+qc.add_gate("RX", targets=0, arg_value=np.pi / 2)
+qc.add_gate("RY", targets=1, arg_value=np.pi / 2)
 qc.add_gate("CZ", controls=0, targets=1)
 
 # Define a Model with model parameters
 # All frequencies are defined in GHz, and times in ns.
 model = SarimnerModel(
     qubit_frequencies=[2 * np.pi * 5.0, 2 * np.pi * 5.4],
-    anharmonicities=[- 2 * np.pi * 0.3, - 2 * np.pi * 0.3],
-    cpl_matrix=np.array([[0, 1e-4],[0, 0]])
+    anharmonicities=[-2 * np.pi * 0.3, -2 * np.pi * 0.3],
+    cpl_matrix=np.array([[0, 1e-4], [0, 0]]),
 )
 
 # Load a compiler
-compiler = SarimnerCompiler
+compiler = SarimnerCompiler(model=model)
 
 # Define all the noise objects as a list.
-noise = [DecoherenceNoise(t1=[60*1e3, 70*1e3], 
-                          t2=[100*1e3, 120*1e3]),
-         ZZCrossTalk(cross_talk_matrix=np.array([[0, 1e-4],[0, 0]]))]
+noise = [
+    DecoherenceNoise(t1=[60 * 1e3, 70 * 1e3], t2=[100 * 1e3, 120 * 1e3]),
+    ZZCrossTalk(cross_talk_matrix=np.array([[0, 1e-4], [0, 0]])),
+]
 
 # Initialize the processor
 processor = SarimnerProcessor(model=model, compiler=compiler, noise=noise)

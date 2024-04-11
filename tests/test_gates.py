@@ -35,7 +35,7 @@ class TestSingleQubitGates(unittest.TestCase):
 
     def test_rx_gate(self):
         qc = QubitCircuit(self.num_qubits)
-        qc.add_gate("RX", targets=0, arg_value=np.pi / 2)
+        qc.add_gate("RX", targets=0, arg_value=np.pi)
         # Load circuit onto processor
         coeffs, tlist = self.processor.load_circuit(qc)
         # Compute the propagator
@@ -51,7 +51,7 @@ class TestSingleQubitGates(unittest.TestCase):
 
     def test_ry_gate(self):
         qc = QubitCircuit(self.num_qubits)
-        qc.add_gate("RY", targets=0, arg_value=np.pi / 2)
+        qc.add_gate("RY", targets=0, arg_value=np.pi)
         # Load circuit onto processor
         coeffs, tlist = self.processor.load_circuit(qc)
         # Compute the propagator
@@ -157,9 +157,7 @@ class TestSingleQubitGates(unittest.TestCase):
         # Get the ideal target state
         U = qc.compute_unitary()
         target_state = U * qubit_initial_state
-        print(np.abs(qubit_state.full()))
         # Compute the fidelity
-        print(np.abs(target_state.full()))
         f = fidelity(target_state, qubit_state)
         self.assertAlmostEqual(1, f, places=3)
 
