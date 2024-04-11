@@ -56,7 +56,7 @@ class SarimnerModel(Model):
         self.num_qubits = num_qubits
         self.qubit_frequencies = qubit_frequencies # Qubit frequency in (GHz)
         self.anharmonicity = anharmonicities # Anharmonicity in (GHz)
-        self.cpl_matrix = cpl_matrix # coupling matrix
+        self.cpl_matrix = cpl_matrix # Coupling matrix
         self.dims = dims if dims is not None else [3] * num_qubits
 
         # Choose rotating frame frequency as the qubit freq
