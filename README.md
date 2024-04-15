@@ -1,5 +1,7 @@
 # chalmers-qubit
 
+[![Tests](https://github.com/aqp-mc2-chalmers/chalmers-qubit/actions/workflows/tests.yml/badge.svg)](https://github.com/aqp-mc2-chalmers/chalmers-qubit/actions/workflows/tests.yml)
+
 A simulation framework for Chalmers devices that can be used to simulate the
 running of quantum algorithms with realistic noise. We follow [qutip-qip](https://qutip-qip.readthedocs.io/en/stable/)
 to build a processor that can take in a quantum circuit (e.g., a QASM cicruit)
