@@ -93,8 +93,22 @@ class SarimnerProcessor(Processor):
         self.set_tlist(tlist)
         return tlist, coeffs
 
+    def run_state(
+        self,
+        init_state=None,
+        analytical=False,
+        states=None,
+        noisy=True,
+        solver="mesolve",
+        qc=None,
+        **kwargs):
+        if qc is not None:
+            self.load_circuit(qc)
+        return super().run_state(init_state,analytical,states,noisy,solver,**kwargs)
+
     def run_propagator(self, qc=None, noisy=False, **kwargs):
         """
+        NOT WORKING AFTER QUTIP UPDATE TO 5.0
         Parameters
         ----------
         qc: :class:`qutip.qip.QubitCircuit`, optional
@@ -118,7 +132,7 @@ class SarimnerProcessor(Processor):
         noisy_qobjevo, c_ops = self.get_qobjevo(noisy=noisy)
 
         # time steps
-        tlist = noisy_qobjevo.tlist
+        tlist = self.get_full_tlist()
         H = noisy_qobjevo.to_list()
 
         # Compute drift Hamiltonians
@@ -129,5 +143,5 @@ class SarimnerProcessor(Processor):
         H[0] = H_drift
 
         # compute the propagator
-        evo_result = propagator(H=H, t=tlist, c_op_list=c_ops, **kwargs)
+        evo_result = propagator(H=H, t=tlist, c_ops=c_ops, **kwargs)
         return evo_result
