@@ -21,7 +21,7 @@ downloading this folder or cloning this repository and running:
 pip install .
 ```
 
-It might be beneficial to install an editable version. In the editable version,
+to get the minimal installation. You can instead use `'.[full]'` to install the package with all optional dependencies, such as matplotlib. Moreover, it might be beneficial to install an editable version. In the editable version,
 changes to the code are reflected system-wide without requiring a reinstallation.
 
 ``` zsh
