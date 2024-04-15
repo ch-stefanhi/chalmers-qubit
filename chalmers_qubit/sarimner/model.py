@@ -101,8 +101,8 @@ class SarimnerModel(Model):
 
         for m in range(num_qubits):
             destroy_op = destroy(dims[m])
-            controls["X" + str(m)] = (destroy_op.dag() + destroy_op, [m])
-            controls["Y" + str(m)] = (1j*(destroy_op.dag() - destroy_op), [m])
+            controls["x" + str(m)] = (destroy_op.dag() + destroy_op, [m])
+            controls["y" + str(m)] = (1j*(destroy_op.dag() - destroy_op), [m])
 
         if self.cpl_matrix is not None:
             # Looping through non-zero elements of the coupling matrix
@@ -112,8 +112,8 @@ class SarimnerModel(Model):
                     destroy_op2 = destroy(dims[n])
                     op1 = tensor(destroy_op1.dag(), destroy_op2)
                     op2 = tensor(destroy_op1, destroy_op2.dag())
-                    controls["ab" + str(m) + str(n)] = (op1+op2, [m, n])
-                    controls["ba" + str(m) + str(n)] = (1j*(op1-op2), [m, n])
+                    controls["(xx+yy)" + str(m) + str(n)] = (op1+op2, [m, n])
+                    controls["(yx-xy)" + str(m) + str(n)] = (1j*(op1-op2), [m, n])
 
         return controls
 
@@ -135,8 +135,8 @@ class SarimnerModel(Model):
 
         for m in range(num_qubits - 1):
             for n in range(m + 1, num_qubits):
-                label_zz[f"ab{m}{n}"] = r"$a^\dagger_{"+ f"{m}" + r"}a_{" + f"{n}" + r"} + a^\dagger_{" + f"{n}" + r"}a_{" + f"{m}" + r"}$"
-                label_zz[f"ba{m}{n}"] = r"$i(a^\dagger_{"+ f"{m}" + r"}a_{" + f"{n}" + r"} - a^\dagger_{" + f"{n}" + r"}a_{" + f"{m}" + r"})$"
+                label_zz[f"(xx+yy){m}{n}"] = r"$a^\dagger_{"+ f"{m}" + r"}a_{" + f"{n}" + r"} + a^\dagger_{" + f"{n}" + r"}a_{" + f"{m}" + r"}$"
+                label_zz[f"(yx-xy){m}{n}"] = r"$i(a^\dagger_{"+ f"{m}" + r"}a_{" + f"{n}" + r"} - a^\dagger_{" + f"{n}" + r"}a_{" + f"{m}" + r"})$"
 
         labels.append(label_zz)
         return labels

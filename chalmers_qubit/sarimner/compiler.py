@@ -63,18 +63,18 @@ class SarimnerCompiler(GateCompiler):
     def set_n_steps(self, n_steps):
         self.n_steps = n_steps
 
-    def coupling(self, t, y: bool, args: dict) -> np.ndarray:
+    def _coupling(self, t, op: str, args: dict) -> np.ndarray:
         omega_drive = args['drivefreq']
         delta = args['detuning']
         phi = args['phase']
         g = args['coupling_strength']
-        if y:
+        if op == "(xx+yy)":
             coeff = g * np.cos(omega_drive * t + phi) * np.cos(delta * t)
-        else:
+        elif op == "(yx-xy)":
             coeff = g * np.cos(omega_drive * t + phi) * np.sin(delta * t)
         return coeff
 
-    def drive_coeff(self, t: np.ndarray, y: bool, args: dict) -> np.ndarray:
+    def _drag(self, t: np.ndarray, op: str, args: dict) -> np.ndarray:
         # Amplitude, needs to be optimized to get perfect pi-pulse or pi/2-pulse
         amp = args['amp']
         # DRAG-parameter, needs to be optimized to get no phase errors for a pi/2-pulse
@@ -87,15 +87,15 @@ class SarimnerCompiler(GateCompiler):
                                / (2 * pow(sigma, 2)))
         Omega_y = qscale * (t - 0.5 * L) / pow(sigma, 2) * Omega_x
 
-        if y:
+        if op == "x":
             coeff = Omega_x * np.cos(drive_freq * t + phase) \
                   + Omega_y * np.sin(drive_freq * t + phase)
-        else:
+        elif op == "y":
             coeff = Omega_x * np.sin(drive_freq * t + phase) \
                   - Omega_y * np.cos(drive_freq * t + phase)
         return coeff
 
-    def rotation_gate(self, gate, phase):
+    def _rotation_gate(self, gate, phase):
         """
         Compiler for the rotational gate that lies along the equator gate
 
@@ -142,13 +142,13 @@ class SarimnerCompiler(GateCompiler):
         }
 
         # set start and end to zero
-        coeff_x = self.drive_coeff(tlist, True, args)
-        coeff_y = self.drive_coeff(tlist, False, args)
+        coeff_x = self._drag(tlist, "x", args)
+        coeff_y = self._drag(tlist, "y", args)
 
         pulse_info = [
             # (control label, coeff)
-            ("X" + str(target), coeff_x),
-            ("Y" + str(target), coeff_y),
+            ("x" + str(target), coeff_x),
+            ("y" + str(target), coeff_y),
         ]
 
         return [Instruction(gate, tlist, pulse_info, t_total)]
@@ -192,7 +192,7 @@ class SarimnerCompiler(GateCompiler):
         target = gate.targets[0]
         # phase
         phase = self.phase[target] + np.pi / 2
-        return self.rotation_gate(gate=gate, phase=phase)
+        return self._rotation_gate(gate=gate, phase=phase)
 
     def rx_compiler(self, gate, args):
         """
@@ -217,7 +217,7 @@ class SarimnerCompiler(GateCompiler):
         target = gate.targets[0]
         # phase
         phase = self.phase[target]
-        return self.rotation_gate(gate=gate, phase=phase)
+        return self._rotation_gate(gate=gate, phase=phase)
 
     def x_compiler(self, gate, args):
         """
@@ -312,8 +312,10 @@ class SarimnerCompiler(GateCompiler):
             "phase": 0,
         }
 
-        pulse_info = [("ab" + str(q1) + str(q2), self.coupling(tlist, True, args)),
-                      ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args))]
+        pulse_info = [
+            ("(xx+yy)" + str(q1) + str(q2), self._coupling(tlist, "(xx+yy)", args)),
+            ("(yx-xy)" + str(q1) + str(q2), self._coupling(tlist, "(yx-xy)", args)),
+        ]
         # ADD VIRTUAL-Z GATES TO CORRECT PHASE
         # self.phase[q1] += np.pi
         # self.phase[q2] += np.pi
@@ -359,8 +361,8 @@ class SarimnerCompiler(GateCompiler):
                 'detuning': (omega1_rot - omega2_rot),
                 'phase': 0}
 
-        pulse_info = [("ab" + str(q1) + str(q2), self.coupling(tlist, True, args)),
-                      ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args))]
+        pulse_info = [("(xx+yy)" + str(q1) + str(q2), self._coupling(tlist, "(xx+yy)", args)),
+                      ("(yx-xy)" + str(q1) + str(q2), self._coupling(tlist, "(yx-xy)", args))]
 
         return [Instruction(gate, tlist, pulse_info, t_total)]
 
@@ -422,11 +424,13 @@ class SarimnerCompiler(GateCompiler):
         t_total = np.sqrt(2) * np.pi / g
         tlist = np.linspace(0, t_total, self.n_steps)
 
+        op_1 = "(xx+yy)"
+        op_2 = "(yx-xy)"
         pulse_info = [
-            ("ab" + str(q1) + str(q2), self.coupling(tlist, True, args1)),
-            ("ba" + str(q1) + str(q2), self.coupling(tlist, False, args1)),
-            ("ab" + str(q1) + str(q3), self.coupling(tlist, True, args2)),
-            ("ba" + str(q1) + str(q3), self.coupling(tlist, False, args2))
+            (op_1 + str(q1) + str(q2), self._coupling(tlist, op_1, args1)),
+            (op_2 + str(q1) + str(q2), self._coupling(tlist, op_2, args1)),
+            (op_1 + str(q1) + str(q3), self._coupling(tlist, op_1, args2)),
+            (op_2 + str(q1) + str(q3), self._coupling(tlist, op_2, args2))
         ]
 
         return [Instruction(gate, tlist, pulse_info, t_total)]
@@ -448,7 +452,7 @@ class SarimnerCompiler(GateCompiler):
         tlist = np.linspace(0, idle_time, self.n_steps)
         coeff = np.zeros(self.n_steps)
         pulse_info = [
-            ("X" + str(q), coeff),
-            ("Y" + str(q), coeff)
+            ("x" + str(q), coeff),
+            ("y" + str(q), coeff)
         ]
         return [Instruction(gate, tlist, pulse_info, idle_time)]
