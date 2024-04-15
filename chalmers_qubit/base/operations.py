@@ -30,7 +30,7 @@ def project_on_qubit(rho: Qobj) -> Qobj:
     l = [base_N.index(i) for i in base_2]
     if rho.type == 'oper':
         # If rho is a density matrix, project it onto the computational basis
-        qubit_state = Qobj([[rho.data[j, i] for i in l] for j in l], dims=[
+        qubit_state = Qobj([[rho.full()[j, i] for i in l] for j in l], dims=[
                            [2] * num_qubits, [2] * num_qubits])
     else:
         # If rho is a state vector, project it onto the computational basis
