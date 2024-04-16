@@ -1,9 +1,8 @@
 from qutip import propagator
-from qutip_qip.device import Processor
+from qutip_qip.noise import Noise
+from qutip_qip.device import Processor, Model
 from qutip_qip.compiler import GateCompiler
 
-from chalmers_qubit.base.model import Model
-from chalmers_qubit.base.noise import Noise
 from chalmers_qubit.sarimner.compiler import SarimnerCompiler
 
 class SarimnerProcessor(Processor):

@@ -1,11 +1,13 @@
 import unittest
 import numpy as np
-from qutip import Qobj, basis, tensor, fidelity, average_gate_fidelity
+from qutip import basis, tensor, fidelity
 from qutip_qip.circuit import QubitCircuit
 from chalmers_qubit.sarimner import SarimnerModel, SarimnerProcessor
 from chalmers_qubit.base.operations import project_on_qubit
 from chalmers_qubit.base.gates import cczs
 
+import warnings
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
 class TestSingleQubitGates(unittest.TestCase):
     def setUp(self) -> None:
@@ -162,7 +164,7 @@ class TestTwoQubitGates(unittest.TestCase):
         # Project final state onto the qsubit subspace
         qubit_state = project_on_qubit(result.states[-1])
         # Compute the phase and make sure that it is -1
-        phase = float(np.angle(complex(qubit_state.full()[-1])))
+        phase = float(np.angle(qubit_state.full()[-1][0]))
         self.assertAlmostEqual(phase, np.pi, places=2)
 
     def test_iswap_gate(self):
@@ -176,7 +178,7 @@ class TestTwoQubitGates(unittest.TestCase):
         # Project final state onto state 10
         final_state = project_on_qubit(result.states[-1]).full()[2]
         # Compute the phase
-        phase_1 = float(np.angle(complex(final_state)))
+        phase_1 = float(np.angle(final_state[0]))
 
         # Simulate
         init_state = tensor(basis(3, 1), basis(3, 0))
@@ -184,7 +186,7 @@ class TestTwoQubitGates(unittest.TestCase):
         # Project final state onto state 01
         final_state = project_on_qubit(result.states[-1]).full()[1]
         # Compute the phase
-        phase_2 = float(np.angle(complex(final_state)))
+        phase_2 = float(np.angle(final_state[0]))
         # Assert that the phase is -i
         self.assertAlmostEqual(phase_1, -np.pi/2, places=2)
         self.assertAlmostEqual(phase_2, -np.pi / 2, places=2)
@@ -217,7 +219,7 @@ class TestThreeQubitGates(unittest.TestCase):
         # Project final state onto the qsubit subspace
         qubit_state = project_on_qubit(result.states[-1]) # type: ignore
         # Compute the phase
-        phase = float(np.angle(complex(qubit_state.full()[-1])))
+        phase = float(np.angle(qubit_state.full()[-1][0]))
         self.assertAlmostEqual(phase, np.pi, places=1)
 
 

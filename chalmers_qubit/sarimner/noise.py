@@ -2,8 +2,7 @@ import numpy as np
 
 from qutip import destroy, num, tensor
 from qutip_qip.pulse import Pulse
-
-from chalmers_qubit.base.noise import Noise
+from qutip_qip.noise import Noise
 
 __all__ = ["DecoherenceNoise", "ZZCrossTalk"]
 
@@ -130,15 +129,17 @@ class ZZCrossTalk(Noise):
             The dummy pulse representing pulse-independent noise.
         """
         for i in range(len(dims) - 1):
-            d1 = dims[i]
-            d2 = dims[i + 1]
-            
-            zz_op = tensor(num(d1), num(d2))
-            zz_coeff = self.ctm[i,i+1]
+            for j in range(i+1, len(dims)):
+                print(i,j)
+                d1 = dims[i]
+                d2 = dims[j]
+                
+                zz_op = tensor(num(d1), num(d2))
+                zz_coeff = self.ctm[i,j]
 
-            systematic_noise.add_control_noise(
-                zz_coeff * zz_op,
-                targets=[i, i + 1],
-                coeff=True
-            )
+                systematic_noise.add_control_noise(
+                    zz_coeff * zz_op,
+                    targets=[i, j],
+                    coeff=True
+                )
         return pulses, systematic_noise

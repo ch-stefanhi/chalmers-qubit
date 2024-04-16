@@ -1,6 +1,6 @@
 import numpy as np
 from qutip import destroy, tensor
-from chalmers_qubit.base.model import Model
+from qutip_qip.device import Model
 
 __all__ = ["SarimnerModel"]
 class SarimnerModel(Model):
