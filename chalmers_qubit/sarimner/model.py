@@ -126,9 +126,9 @@ class SarimnerModel(Model):
         """
         num_qubits = self.num_qubits
         labels = [
-            {f"X{n}": r"$a_{" + f"{n}" + r"}^\dagger + a_{"
+            {f"x{n}": r"$a_{" + f"{n}" + r"}^\dagger + a_{"
                 + f"{n}" + r"}$" for n in range(num_qubits)},
-            {f"Y{n}": r"$i(a_{" + f"{n}" + r"}^\dagger - a_{"
+            {f"y{n}": r"$i(a_{" + f"{n}" + r"}^\dagger - a_{"
              + f"{n}" + r"}$)" for n in range(num_qubits)},
         ]
         label_zz = {}
