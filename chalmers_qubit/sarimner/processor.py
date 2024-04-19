@@ -1,3 +1,4 @@
+from typing import Optional
 from qutip import propagator
 from qutip_qip.device import Processor
 from qutip_qip.compiler import GateCompiler
@@ -8,17 +9,37 @@ from chalmers_qubit.sarimner.compiler import SarimnerCompiler
 
 class SarimnerProcessor(Processor):
     """
-    Description goes here
+    Initialize a new SarimnerProcessor instance with a quantum model, an optional compiler, and noise models.
 
     Parameters
     ----------
-    
+    model : Model
+        The quantum model that defines the physical properties and capabilities of the processor.
+    compiler : GateCompiler, optional
+        The compiler used to translate quantum gates into executable operations. If not provided,
+        a default compiler specific to the model (SarimnerCompiler) is instantiated and used.
+    noise : list, optional
+        A list of noise models to be added to the processor. Each element in the list should be compatible
+        with the processor's noise handling methods.
+
+    Attributes
+    ----------
+    model : Model
+        The model of the quantum processor, storing physical properties.
+    _default_compiler : GateCompiler
+        Holds the compiler instance being used, either the provided one or a default SarimnerCompiler.
+    native_gates : NoneType
+        Initially set to None, to be configured with the gate set natively supported by the processor.
+    pulse_mode : str
+        Mode of pulse operation, set to 'discrete' by default, indicating how pulses are treated in the processor.
+    global_phase : float
+        The global phase of the quantum state managed by the processor, initialized to 0.
     """
 
     def __init__(self,
                  model:Model,
-                 compiler:GateCompiler = None,
-                 noise:list = None):
+                 compiler:Optional[GateCompiler] = None,
+                 noise:Optional[list] = None):
 
         self.model = model
 
@@ -34,7 +55,6 @@ class SarimnerProcessor(Processor):
         super(SarimnerProcessor, self).__init__(model=self.model)
         self.native_gates = None
         self.pulse_mode = "discrete"
-        # Initialize global phase to 0
         self.global_phase = 0
 
     def add_noise(self, noise):
