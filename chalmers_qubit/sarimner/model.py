@@ -22,7 +22,7 @@ class SarimnerModel(Model):
     rotating_frame_frequencies : list of float, optional
         Frequencies defining the rotating frame for each qubit. Defaults to the frequencies of the qubits
         themselves if not provided.
-    cpl_matrix : np.ndarray or int, optional
+    coupling_matrix : np.ndarray or int, optional
         Coupling matrix between qubits. If an integer is provided, it initializes a matrix filled with this
         integer in the upper triangular part. If not provided, the coupling effect is considered absent.
     dims : list of int, optional
@@ -32,7 +32,7 @@ class SarimnerModel(Model):
     ------
     ValueError
         If the lengths of `anharmonicities` does not match the number of qubits.
-        If `cpl_matrix` is provided but is neither an integer nor a numpy.ndarray.
+        If `coupling_matrix` is provided but is neither an integer nor a numpy.ndarray.
 
     Attributes
     ----------
@@ -44,7 +44,7 @@ class SarimnerModel(Model):
         Stored anharmonicities of each qubit.
     rotating_frame_frequencies : list of float
         Rotating frame frequencies used.
-    cpl_matrix : np.ndarray
+    coupling_matrix : np.ndarray
         Coupling matrix used for the simulation.
     dims : list of int
         Dimensions of each qubit's state space.
@@ -61,7 +61,7 @@ class SarimnerModel(Model):
                  qubit_frequencies: list, 
                  anharmonicities: list, 
                  rotating_frame_frequencies: Optional[list] = None,
-                 cpl_matrix: Optional[np.ndarray] = None,
+                 coupling_matrix: Optional[np.ndarray] = None,
                  dims: Optional[list] = None):
 
         # number of qubits
@@ -70,7 +70,7 @@ class SarimnerModel(Model):
         if len(anharmonicities) != num_qubits:
             raise ValueError("The length of anharmonicities must be the same as num_qubits.")
 
-        if isinstance(cpl_matrix, int):
+        if isinstance(coupling_matrix, int):
             # Create an n x n matrix filled with zeros
             matrix = np.zeros((num_qubits, num_qubits))
 
@@ -78,17 +78,20 @@ class SarimnerModel(Model):
             # NOT SURE IF THIS IS CORRECT
             for i in range(num_qubits):
                 for j in range(i+1, num_qubits):
-                    matrix[i, j] = cpl_matrix
-            cpl_matrix = matrix
+                    matrix[i, j] = coupling_matrix
+            coupling_matrix = matrix
 
-        elif isinstance(cpl_matrix, np.ndarray) is False and cpl_matrix is not None: 
-            raise ValueError("cpl_matrix should be type int or numpy.ndarray.")
+        elif (
+            isinstance(coupling_matrix, np.ndarray) is False
+            and coupling_matrix is not None
+        ):
+            raise ValueError("coupling_matrix should be type int or numpy.ndarray.")
 
         # Initialize class variables if all checks pass
         self.num_qubits = num_qubits
         self.qubit_frequencies = qubit_frequencies
         self.anharmonicity = anharmonicities
-        self.cpl_matrix = cpl_matrix
+        self.coupling_matrix = coupling_matrix
         self.dims = dims if dims is not None else [3] * num_qubits
 
         if rotating_frame_frequencies is None:
@@ -100,7 +103,7 @@ class SarimnerModel(Model):
             "wq": self.qubit_frequencies,
             "alpha": self.anharmonicity,
             "wr": self.rotating_frame_frequencies,
-            "cpl_matrix": self.cpl_matrix
+            "coupling_matrix": self.coupling_matrix
         }
 
         # setup drift, controls an noise
@@ -134,9 +137,9 @@ class SarimnerModel(Model):
             controls["x" + str(m)] = (destroy_op.dag() + destroy_op, [m])
             controls["y" + str(m)] = (1j*(destroy_op.dag() - destroy_op), [m])
 
-        if self.cpl_matrix is not None:
+        if self.coupling_matrix is not None:
             # Looping through non-zero elements of the coupling matrix
-            for (m, n), value in np.ndenumerate(self.cpl_matrix):
+            for (m, n), value in np.ndenumerate(self.coupling_matrix):
                 if value != 0:
                     destroy_op1 = destroy(dims[m])
                     destroy_op2 = destroy(dims[n])

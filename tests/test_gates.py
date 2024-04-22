@@ -145,7 +145,7 @@ class TestTwoQubitGates(unittest.TestCase):
         self.model = SarimnerModel(
             qubit_frequencies=[2 * np.pi * 5.0, 2 * np.pi * 5.4],
             anharmonicities=[-2 * np.pi * 0.3, -2 * np.pi * 0.3],
-            cpl_matrix=np.array([[0, 2* np.pi * 1e-3], 
+            coupling_matrix=np.array([[0, 2* np.pi * 1e-3], 
                                  [0, 0]]),
         )
         self.processor = SarimnerProcessor(model=self.model)
@@ -198,7 +198,7 @@ class TestThreeQubitGates(unittest.TestCase):
         self.model = SarimnerModel(
             qubit_frequencies=[2 * np.pi * 5.0, 2 * np.pi * 5.4, 2 * np.pi * 5.2],
             anharmonicities=[-2 * np.pi * 0.3, -2 * np.pi * 0.3, -2 * np.pi * 0.3],
-            cpl_matrix=np.array([[0, 2 * np.pi * 1e-3, 2 * np.pi * 1e-3], 
+            coupling_matrix=np.array([[0, 2 * np.pi * 1e-3, 2 * np.pi * 1e-3], 
                                  [0, 0, 0], 
                                  [0, 0, 0]]),
         )

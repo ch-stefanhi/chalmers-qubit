@@ -74,7 +74,7 @@ qc.add_gate("CZ", controls=0, targets=1)
 model = SarimnerModel(
     qubit_frequencies=[2 * np.pi * 5.0, 2 * np.pi * 5.4],
     anharmonicities=[-2 * np.pi * 0.3, -2 * np.pi * 0.3],
-    cpl_matrix=np.array([[0, 1e-4], [0, 0]]),
+    coupling_matrix=np.array([[0, 1e-4], [0, 0]]),
 )
 
 # Load a compiler
@@ -89,7 +89,7 @@ noise = [
 # Initialize the processor
 processor = SarimnerProcessor(model=model, compiler=compiler, noise=noise)
 
-# Load the circuit that generates the pulses and run the simulation
+# Load the circuit that generates the pulses to run the simulation
 tlist, coeffs = processor.load_circuit(qc)
 
 # Initial state for the simulation.

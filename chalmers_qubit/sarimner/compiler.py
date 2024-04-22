@@ -296,7 +296,7 @@ class SarimnerCompiler(GateCompiler):
         omega1_rot = self.params["wr"][q1]
         omega2 = self.params["wq"][q2]
         omega2_rot = self.params["wr"][q2]
-        coupling_strength = self.params["cpl_matrix"][q1,q2]
+        coupling_strength = self.params["coupling_matrix"][q1,q2]
 
         t_total = np.pi / coupling_strength
         tlist = np.linspace(0, t_total, self.n_steps)
@@ -347,7 +347,7 @@ class SarimnerCompiler(GateCompiler):
         omega2 = self.params["wq"][q2]
         omega2_rot = self.params["wr"][q2]
         alpha1 = self.params["alpha"][q1]
-        coupling_strength = self.params["cpl_matrix"][q1,q2]
+        coupling_strength = self.params["coupling_matrix"][q1,q2]
 
         t_total = np.sqrt(2) * np.pi / coupling_strength
         tlist = np.linspace(0, t_total, self.n_steps)
@@ -397,8 +397,8 @@ class SarimnerCompiler(GateCompiler):
         omega2_rot = self.params["wr"][q2]
         omega3_rot = self.params["wr"][q3]
         alpha1 = self.params["alpha"][q1]
-        g1 = self.params["cpl_matrix"][q1,q2]
-        g2 = self.params["cpl_matrix"][q1,q3]
+        g1 = self.params["coupling_matrix"][q1,q2]
+        g2 = self.params["coupling_matrix"][q1,q3]
 
         # Check if qubit q1 and q2 and q1 and q3 are coupled together
         if g1 == 0:
