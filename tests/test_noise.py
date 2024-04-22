@@ -161,7 +161,3 @@ class TestTwoQubitNoise(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-# 9.74091539e-01
-# 9.74091539e-01
