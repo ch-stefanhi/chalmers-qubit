@@ -1,7 +1,7 @@
 import numpy as np
-
+from typing import Optional
 from qutip import destroy, num, tensor
-from qutip_qip.pulse import Pulse
+from qutip_qip.pulse import Pulse, Drift
 from qutip_qip.noise import Noise
 
 __all__ = ["DecoherenceNoise", "ZZCrossTalk"]
@@ -12,29 +12,36 @@ class DecoherenceNoise(Noise):
 
     Parameters
     ----------
-    t1: float or list, optional
+    t1: list
         Characterize the decoherence of amplitude damping for
         each qubit.
-    t2: float or list, optional
+    t2: list
         Characterize the decoherence of dephasing for
         each qubit.
-    targets: int or list, optional
-        The indices of qubits that are acted on. Default is on all
-        qubits
+    dims: list, optional
+        The dimension of the components system, the default value is
+        [3,3...,3].
+
+     Raises
+    ------
+    ValueError
+        If t1 and t2 does not have the same length.
 
     Attributes
     ----------
-    t1: float or list
+    num_qubits: int
+        Number of qubits.
+    dims: list
+        The dimension of the components system.
+    t1: list
         Characterize the decoherence of amplitude damping for
         each qubit.
-    t2: float or list
+    t2: list
         Characterize the decoherence of dephasing for
         each qubit.
-    targets: int or list
-        The indices of qubits that are acted on.
     """
 
-    def __init__(self, t1, t2, dims=None):
+    def __init__(self, t1:list, t2:list, dims:Optional[list]=None):
         if len(t1) != len(t2):
             raise ValueError("The length of t1 and t2 must be the same.")
 
@@ -43,16 +50,15 @@ class DecoherenceNoise(Noise):
         self.t1 = t1
         self.t2 = t2
 
-    def get_noisy_pulses(self, dims, pulses=None, systematic_noise=None):
+    def get_noisy_pulses(self, dims:list, pulses:Optional[Pulse]=None, systematic_noise:Optional[Pulse]=None):
         """
         Return the input pulses list with noise added and
         the pulse independent noise in a dummy :class:`.Pulse` object.
 
         Parameters
         ----------
-        dims: list, optional
-            The dimension of the components system, the default value is
-            [2,2...,2] for qubits system.
+        dims: list
+            The dimension of the components system.
         pulses : list of :class:`.Pulse`
             The input pulses. The noise will be added to pulses in this list.
         systematic_noise : :class:`.Pulse`
@@ -97,25 +103,38 @@ class ZZCrossTalk(Noise):
 
     Parameters
     ----------
-    params:
-        Parameters computed from a :class:`.SCQubits`.
+    cross_talk_matrix: np.ndarray
+        Cross-talk matrix where element (i,j) corresponds to the
+        cross-talk strength between qubit `i` and `j`.
+    dims: list, optional
+        The dimension of the components system, the default value is
+        [3,3...,3].
+
+    Attributes
+    ----------
+    ctm: np.ndarray
+        Cross-talk matrix.
+    num_qubits: int
+        Number of qubits.
+    dims: list
+        The dimension of the components system.
     """
 
-    def __init__(self, cross_talk_matrix, dims=None):
+    def __init__(self, cross_talk_matrix:np.ndarray, dims:Optional[list]=None):
         self.ctm = cross_talk_matrix
         self.num_qubits, _ = self.ctm.shape
         self.dims = dims if dims is not None else [3] * self.num_qubits
 
-    def get_noisy_pulses(self, dims=None, pulses=None, systematic_noise=None):
+    def get_noisy_pulses(self, dims:list, pulses:Optional[Pulse]=None, systematic_noise:Optional[Pulse]=None):
         """
         Return the input pulses list with noise added and
         the pulse independent noise in a dummy :class:`.Pulse` object.
 
         Parameters
         ----------
-        dims: list, optional
+        dims: list
             The dimension of the components system, the default value is
-            [2,2...,2] for qubits system.
+            [3,3...,3] for qutrit system.
         pulses : list of :class:`.Pulse`
             The input pulses. The noise will be added to pulses in this list.
         systematic_noise : :class:`.Pulse`
@@ -123,23 +142,26 @@ class ZZCrossTalk(Noise):
 
         Returns
         -------
-        noisy_pulses: list of :class:`.Pulse`
+        pulses: list of :class:`.Pulse`
             Noisy pulses.
         systematic_noise : :class:`.Pulse`
             The dummy pulse representing pulse-independent noise.
         """
+        if systematic_noise is None:
+            systematic_noise = Pulse(None, None, label="system")
+
         for i in range(len(dims) - 1):
             for j in range(i+1, len(dims)):
-                print(i,j)
                 d1 = dims[i]
                 d2 = dims[j]
-                
+
                 zz_op = tensor(num(d1), num(d2))
                 zz_coeff = self.ctm[i,j]
 
                 systematic_noise.add_control_noise(
                     zz_coeff * zz_op,
                     targets=[i, j],
-                    coeff=True
+                    tlist=None,
+                    coeff=True,
                 )
         return pulses, systematic_noise
