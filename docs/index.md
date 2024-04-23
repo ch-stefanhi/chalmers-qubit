@@ -1,12 +1,10 @@
-# chalmers-qubit
+# Introduction
 
-[![Tests](https://github.com/aqp-mc2-chalmers/chalmers-qubit/actions/workflows/tests.yml/badge.svg)](https://github.com/aqp-mc2-chalmers/chalmers-qubit/actions/workflows/tests.yml)
-
-A simulation framework for Chalmers devices that can be used to simulate the running of quantum algorithms with realistic noise. We follow [qutip-qip](https://qutip-qip.readthedocs.io/en/stable/) to build a processor that can take in a quantum circuit (e.g., a QASM cicruit) and performs a master equation simulation adding noise such as T1 and T2. It is also possible to perform a Monte-Carlo trajectory simulation and customize the processor to add various types of noise such as [ZZCrossTalk](https://qutip-qip.readthedocs.io/en/latest/apidoc/qutip_qip.noise.html#qutip_qip.noise.ZZCrossTalk).
+Welcome to the Chalmers Qubit simulator package! A simulation framework for Chalmers devices that can be used to simulate the running of quantum algorithms with realistic noise. We follow [qutip-qip](https://qutip-qip.readthedocs.io/en/stable/) to build a processor that can take in a quantum circuit (e.g., a QASM cicruit) and performs a master equation simulation adding noise such as T1 and T2. It is also possible to perform a Monte-Carlo trajectory simulation and customize the processor to add various types of noise such as [ZZCrossTalk](https://qutip-qip.readthedocs.io/en/latest/apidoc/qutip_qip.noise.html#qutip_qip.noise.ZZCrossTalk).
 
 The package is under development and testing. 
 
-# Installation
+## Installation
 
 The main requirement to use this package is [qutip-qip](https://qutip-qip.readthedocs.io/en/stable/) based on [qutip](https://qutip-qip.readthedocs.io/en/stable/): The Quantum Toolbox in Python. The requirements are already specified in the `setup.py` file and you can install the package `chalmers_qubit` simply by downloading this folder or cloning this repository and running:
 
@@ -26,7 +24,7 @@ If you do not care about making changes to the source code and just want to try 
 pip install git+https://github.com/aqp-mc2-chalmers/chalmers-qubit.git
 ```
 
-# Usage
+## Usage
 
 The usage of the package follows [qutip-qip](https://qutip-qip.readthedocs.io/en/stable/) where first, a quantum circuit is defined using [`qutip-qip`](https://qutip-qip.readthedocs.io/en/stable/qip-simulator.html) and then run on one of the custom Chalmers processors, e.g., the processor called sarimner. The custom processor is defined in `chalmers_qubit.sarimner.processor` and can be initialized with a `model`, `compiler` and `noise`. 
 
@@ -34,7 +32,7 @@ Note that only gates with compilation instructions in `chalmers_qubit/sarimner/c
 
 Notebooks exploring the usage of the simulator is available in `examples/`. 
 
-``` python
+```py
 import numpy as np
 from qutip import basis, tensor
 from qutip_qip.circuit import QubitCircuit
@@ -90,13 +88,13 @@ print("Final state", result.states[-1])
 
 It is also possible to import QASM circuits.
 
-# Development
+## Development
 
 In order to add new custom pulses or modify the device, edit the processor, or compiler the tutorials and detailed instructions in [qutip-qip](https://qutip-qip.readthedocs.io/en/stable/).
 
 The [tutorials](https://qutip.org/qutip-tutorials/) show examples of how to customize the processor. If you have installed the package in the develop mode, any changes to the processor, e.g., adding a new gate will be reflected immediately system-wide without requiring a reinstallation of the package.
 
-# Support
+## Support
 
 This package was built from contributions by Pontus Vikstål, Kamanasish Debnath and Shahnawaz Ahmed.
 
