@@ -53,7 +53,8 @@ class SarimnerProcessor(Processor):
 
         super(SarimnerProcessor, self).__init__(model=self.model)
         self.native_gates = None
-        self.pulse_mode = "discrete"
+        self.pulse_mode = "continuous"
+        self.spline_kind = "cubic"
         self.global_phase = 0
 
     def add_noise(self, noise):
