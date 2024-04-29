@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Optional
+from typing import Optional, Union
 from qutip import destroy, tensor
 from qutip_qip.device import Model
 
@@ -48,6 +48,19 @@ class SarimnerModel(Model):
         Coupling matrix used for the simulation.
     dims : list of int
         Dimensions of each qubit's state space.
+    spline_kind : str, optional
+        Type of the coefficient interpolation. Default is "step_func"
+        Note that they have different requirements for the length of ``coeff``.
+
+        -"step_func":
+        The coefficient will be treated as a step function.
+        E.g. ``tlist=[0,1,2]`` and ``coeff=[3,2]``, means that the coefficient
+        is 3 in t=[0,1) and 2 in t=[1,2). It requires
+        ``len(coeff)=len(tlist)-1`` or ``len(coeff)=len(tlist)``, but
+        in the second case the last element of ``coeff`` has no effect.
+
+        -"cubic": Use cubic interpolation for the coefficient. It requires
+        ``len(coeff)=len(tlist)``
     params : dict
         Dictionary holding system parameters for easy access.
     _drift : list
@@ -57,12 +70,14 @@ class SarimnerModel(Model):
     _noise : list
         List initialized for adding noise models.
     """
-    def __init__(self, 
-                 qubit_frequencies: list, 
-                 anharmonicities: list, 
-                 rotating_frame_frequencies: Optional[list] = None,
-                 coupling_matrix: Optional[np.ndarray] = None,
-                 dims: Optional[list] = None):
+    def __init__(
+        self,
+        qubit_frequencies: list,
+        anharmonicities: list,
+        rotating_frame_frequencies: Optional[list] = None,
+        coupling_matrix: Union[float, np.ndarray, None] = None,
+        dims: Optional[list] = None,
+    ):
 
         # number of qubits
         num_qubits = len(qubit_frequencies)
@@ -70,7 +85,7 @@ class SarimnerModel(Model):
         if len(anharmonicities) != num_qubits:
             raise ValueError("The length of anharmonicities must be the same as num_qubits.")
 
-        if isinstance(coupling_matrix, int):
+        if isinstance(coupling_matrix, float):
             # Create an n x n matrix filled with zeros
             matrix = np.zeros((num_qubits, num_qubits))
 

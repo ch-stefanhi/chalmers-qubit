@@ -34,10 +34,9 @@ class SarimnerCompiler(GateCompiler):
         It saves the decomposition scheme for each gate.
     """
 
-    def __init__(self, model, n_steps:int=5000):
+    def __init__(self, model):
         self.num_qubits = model.num_qubits
         self.params = model.params
-        self.n_steps = n_steps  # numer of time-steps
 
         super().__init__(num_qubits=self.num_qubits, params=self.params)
         self.gate_compiler.update(
@@ -58,10 +57,6 @@ class SarimnerCompiler(GateCompiler):
         self.phase = [0] * self.num_qubits
         # initialise the global phase to 0.
         self.global_phase = 0
-
-    # Optionally, a method to change n_steps on an existing instance
-    def set_n_steps(self, n_steps):
-        self.n_steps = n_steps
 
     def _coupling(self, t, op: str, args: dict) -> np.ndarray:
         omega_drive = args['drivefreq']
@@ -118,20 +113,27 @@ class SarimnerCompiler(GateCompiler):
         target = gate.targets[0]
 
         # Gaussian width in ns
-        sigma = 10
-
-        # Gate time in ns
-        t_total = 50
-        tlist = np.linspace(0, t_total, self.n_steps)
+        sigma = 5
 
         # amplitude
-        amp = 0.06345380720748712 * gate.arg_value / np.pi
+        amp = 0.12533148558448476 * gate.arg_value / np.pi
 
         # parameters
         alpha = self.params["alpha"][target]
         omega_qubit = self.params["wq"][target]
         rotating_freq = self.params["wr"][target]
         omega_drive = rotating_freq - omega_qubit
+
+        # Gate time in ns
+        t_total = 50
+        # Full width half maximum of gaussian 
+        fwhm = int(2.354 * sigma)
+        # Number of samples
+        n_steps = 3 * (omega_drive * t_total) / (2*np.pi) + fwhm
+        
+        tlist = np.linspace(0, t_total, int(n_steps))
+
+        # arguments
         args = {
             "amp": amp,
             "qscale": -0.5 / alpha,
@@ -168,7 +170,7 @@ class SarimnerCompiler(GateCompiler):
 
         """
         q = gate.targets[0]  # target qubit
-        self.phase[q] += - gate.arg_value
+        self.phase[q] -= gate.arg_value
 
     def ry_compiler(self, gate, args):
         """
@@ -298,8 +300,17 @@ class SarimnerCompiler(GateCompiler):
         omega2_rot = self.params["wr"][q2]
         coupling_strength = self.params["coupling_matrix"][q1,q2]
 
+        # Drive frequency
+        omega_d = abs(omega1 - omega2)
+        # Rotating frame detuning
+        detuning = (omega1_rot - omega2_rot)
+        # Total time of gate
         t_total = np.pi / coupling_strength
-        tlist = np.linspace(0, t_total, self.n_steps)
+        # sampling frequency should be at least two times the signal frequency
+        # (Here we have choosen 2.1 times, but we could play around with this value)
+        f_s = 2.1 * (omega_d + abs(detuning)) / (2 * np.pi)
+        n_steps = int(t_total * f_s)
+        tlist = np.linspace(0, t_total, n_steps)
 
         # Check if qubit q1 and q2 are coupled together
         if coupling_strength == 0:
@@ -307,8 +318,8 @@ class SarimnerCompiler(GateCompiler):
 
         args = {
             "coupling_strength": coupling_strength,
-            "drivefreq": abs(omega1 - omega2),
-            "detuning": (omega1_rot - omega2_rot),
+            "drivefreq": omega_d,
+            "detuning": detuning,
             "phase": 0,
         }
 
@@ -316,9 +327,9 @@ class SarimnerCompiler(GateCompiler):
             ("(xx+yy)" + str(q1) + str(q2), self._coupling(tlist, "(xx+yy)", args)),
             ("(yx-xy)" + str(q1) + str(q2), self._coupling(tlist, "(yx-xy)", args)),
         ]
-        # ADD VIRTUAL-Z GATES TO CORRECT PHASE
-        # self.phase[q1] += np.pi
-        # self.phase[q2] += np.pi
+        # ADD VIRTUAL-Z GATES TO CORRECT THE PHASE
+        self.phase[q1] -= np.pi
+        self.phase[q2] -= np.pi
         return [Instruction(gate, tlist, pulse_info, t_total)]
 
     def cz_compiler(self, gate, args):
@@ -349,16 +360,26 @@ class SarimnerCompiler(GateCompiler):
         alpha1 = self.params["alpha"][q1]
         coupling_strength = self.params["coupling_matrix"][q1,q2]
 
+        # Drive frequency
+        omega_d = abs(omega1 + alpha1 - omega2)
+        # Rotating frame detuning
+        detuning = omega1_rot - omega2_rot
+
+        # Time of gate
         t_total = np.sqrt(2) * np.pi / coupling_strength
-        tlist = np.linspace(0, t_total, self.n_steps)
+        # sampling frequency should be at least two times the signal frequency
+        # (Here we have choosen 3 times, but we could play around with this value)
+        f_s = 2.1 * (omega_d + abs(detuning)) / (2*np.pi)
+        n_steps = int(t_total * f_s)
+        tlist = np.linspace(0, t_total, n_steps)
 
         # Check if qubit q1 and q2 are coupled together
         if coupling_strength == 0:
             raise ValueError(f"Qubit {q1} and {q2} are not coupled together.")
 
         args = {'coupling_strength': coupling_strength,
-                'drivefreq': abs(omega1 + alpha1 - omega2),
-                'detuning': (omega1_rot - omega2_rot),
+                'drivefreq': omega_d,
+                'detuning': detuning,
                 'phase': 0}
 
         pulse_info = [("(xx+yy)" + str(q1) + str(q2), self._coupling(tlist, "(xx+yy)", args)),
@@ -409,20 +430,28 @@ class SarimnerCompiler(GateCompiler):
         omega1_drive = abs(omega1 + alpha1 - omega2)
         omega2_drive = abs(omega1 + alpha1 - omega3)
 
+        detuning1 = omega1_rot - omega2_rot
+        detuning2 = omega1_rot - omega3_rot
+
+        fs_1 = omega1_drive + abs(detuning1)
+        fs_2 = omega2_drive + abs(detuning2)
+        fs = 2.1 * max([fs_1, fs_2]) / (2 * np.pi)
+
         # We do simultaneous drive
         args1 = {"coupling_strength": g1,
                  "drivefreq": omega1_drive,
-                 "detuning": (omega1_rot - omega2_rot),
+                 "detuning": detuning1,
                  "phase": 0}
         args2 = {"coupling_strength": g2,
                  "drivefreq": omega2_drive,
-                 "detuning": (omega1_rot - omega3_rot),
+                 "detuning": detuning2,
                  "phase": phi - np.pi}
 
         # gate time
         g = np.sqrt(np.abs(g1)**2 + np.abs(g2)**2)
         t_total = np.sqrt(2) * np.pi / g
-        tlist = np.linspace(0, t_total, self.n_steps)
+        n_steps = int(t_total * fs)
+        tlist = np.linspace(0, t_total, n_steps)
 
         op_1 = "(xx+yy)"
         op_2 = "(yx-xy)"
@@ -449,10 +478,23 @@ class SarimnerCompiler(GateCompiler):
         # target qubit
         q = gate.targets[0]
         idle_time = gate.arg_value
-        tlist = np.linspace(0, idle_time, self.n_steps)
-        coeff = np.zeros(self.n_steps)
-        pulse_info = [
-            ("x" + str(q), coeff),
-            ("y" + str(q), coeff)
-        ]
-        return [Instruction(gate, tlist, pulse_info, idle_time)]
+
+        if idle_time < 0:
+            ValueError("Error: Idle time cannot be negative.")
+        elif idle_time == 0:
+            # Skip the gate if idle-time is zero.
+            pass
+        else:
+            # Take one time step for every nano second
+            n_steps = int(np.ceil(idle_time))
+            # Make sure that we at least take two steps
+            if n_steps < 2:
+                n_steps = 2
+            tlist = np.linspace(0, idle_time, n_steps)
+            coeff = np.zeros(n_steps)
+            # Create a pulse with zero amplitude
+            pulse_info = [
+                ("x" + str(q), coeff),
+                ("y" + str(q), coeff)
+            ]
+            return [Instruction(gate, tlist, pulse_info, idle_time)]

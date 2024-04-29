@@ -22,7 +22,7 @@ class DecoherenceNoise(Noise):
         The dimension of the components system, the default value is
         [3,3...,3].
 
-     Raises
+    Raises
     ------
     ValueError
         If t1 and t2 does not have the same length.
